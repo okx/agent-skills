@@ -458,7 +458,7 @@ okx bot grid sub-orders --algoOrdType <type> --algoId <id> [--live] [--json]
 okx bot dca create --instId <id> \
   --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
   --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> \
-  --tpPct <ratio> [--slPct <ratio>] \
+  --tpPct <ratio> [--slPct <ratio>] [--slMode <limit|market>] \
   --triggerType <1|2> \
   [--reserveFunds <true|false>] [--json]
 
@@ -466,7 +466,7 @@ okx bot dca create --instId <id> \
 okx bot dca create --type contract --instId <id> \
   --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
   --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> \
-  --tpPct <ratio> [--slPct <ratio>] \
+  --tpPct <ratio> [--slPct <ratio> --slMode <limit|market>] \
   --lever <n> --side <buy|sell> \
   [--reserveFunds <true|false>] [--json]
 ```
@@ -482,7 +482,8 @@ okx bot dca create --type contract --instId <id> \
 | `--pxStepsMult` | Yes | - | Price step multiplier between safety orders (e.g., `1.2`) |
 | `--volMult` | Yes | - | Safety order size multiplier (e.g., `1.5`) |
 | `--tpPct` | Yes | - | Take-profit ratio (e.g., `0.03` = 3%) |
-| `--slPct` | No | - | Stop-loss ratio (e.g., `0.05` = 5%) |
+| `--slPct` | No | - | Stop-loss ratio (e.g., `0.05` = 5%). Must be > total price deviation of all safety orders |
+| `--slMode` | No | - | Stop-loss price type: `limit` or `market`. **Required when `--slPct` is set** |
 | `--reserveFunds` | No | `false` | Pre-reserve full required assets upfront |
 | `--triggerType` | Spot only | - | `1`=instant start, `2`=RSI signal trigger |
 | `--lever` | Contract only | - | Leverage multiplier (e.g., `3`) |
@@ -606,12 +607,12 @@ okx bot dca details --algoId 87654321
 okx bot dca stop --algoId 87654321 --instId ETH-USDT --stopType 1
 ```
 
-**"Create a contract DCA bot on BTC perp, long, 3x leverage, 2% TP"**
+**"Create a contract DCA bot on BTC perp, long, 3x leverage, 2% TP, 15% SL"**
 ```bash
 okx bot dca create --type contract --instId BTC-USDT-SWAP \
   --initOrdAmt 200 --safetyOrdAmt 100 --maxSafetyOrds 3 \
   --pxSteps 0.03 --pxStepsMult 1.2 --volMult 1.5 \
-  --tpPct 0.02 --lever 3 --side buy
+  --tpPct 0.02 --slPct 0.15 --slMode market --lever 3 --side buy
 ```
 
 ## Edge Cases
@@ -690,6 +691,7 @@ When communicating with users, use the display name instead of the raw API field
 | `volMult` | Safety order size multiplier | 补仓金额倍数 |
 | `tpPct` | Take-profit ratio (%) | 止盈比例（%） |
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
+| `slMode` | Stop-loss type (limit / market) | 止损类型（限价 / 市价） |
 | `triggerType` | Trigger mode (1=instant, 2=RSI) | 触发方式（1=立即, 2=RSI 信号） |
 | `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
 
@@ -708,6 +710,7 @@ When communicating with users, use the display name instead of the raw API field
 | `volMult` | Safety order size multiplier | 补仓金额倍数 |
 | `tpPct` | Take-profit ratio (%) | 止盈比例（%） |
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
+| `slMode` | Stop-loss type (limit / market) | 止损类型（限价 / 市价） |
 | `lever` | Leverage | 杠杆倍数 |
 | `side` | Direction (buy=long, sell=short) | 方向（buy=做多, sell=做空） |
 | `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
@@ -718,7 +721,6 @@ When communicating with users, use the display name instead of the raw API field
 >
 > When the stop-loss price is triggered and the position is fully closed, the bot ends.
 >
-> ⚠ **Known bug**: `slPct` is accepted by the OKX API but the current okx-trade-mcp contract DCA handler does not pass it through. Until fixed, use the MCP tool directly or patch the handler.
 
 ### Interaction Rules
 

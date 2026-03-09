@@ -178,7 +178,7 @@ Agent replies: "Grid bot created: 12345678 (OK) — simulated, no real funds use
 okx bot grid create --instId BTC-USDT --algoOrdType grid \
   --minPx 90000 --maxPx 100000 --gridNum 10 --quoteSz 1000
 
-# Create a contract grid bot on BTC perp (neutral, 5x leverage, 100 contracts)
+# Create a contract grid bot on BTC perp (neutral, 5x leverage, 100 USDT margin)
 # basePos defaults to true for long/short (opens base position); neutral ignores it
 okx bot grid create --instId BTC-USDT-SWAP --algoOrdType contract_grid \
   --minPx 90000 --maxPx 100000 --gridNum 10 \
@@ -345,7 +345,7 @@ Before any authenticated command:
 
 - Grid create: confirm `--minPx`, `--maxPx`, `--gridNum`; verify `--minPx` < current price < `--maxPx`; confirm investment size
     - Spot grid: `--quoteSz` (USDT) or `--baseSz` (base currency)
-    - Contract grid: `--direction` (`long`/`short`/`neutral`), `--lever`, `--sz` (number of contracts); `--basePos` defaults to `true` (open base position for long/short)
+    - Contract grid: `--direction` (`long`/`short`/`neutral`), `--lever`, `--sz` (investment margin in USDT); `--basePos` defaults to `true` (open base position for long/short)
 - DCA create: confirm `--initOrdAmt`, `--safetyOrdAmt`, `--maxSafetyOrds`, `--pxSteps`, `--tpPct`
     - Spot DCA: requires `--triggerType` (`1`=instant, `2`=RSI); default `--type spot`
     - Contract DCA: add `--type contract`, `--lever`, and `--side` (`buy`=long, `sell`=short)
@@ -391,7 +391,7 @@ okx bot grid create --instId <id> --algoOrdType <type> \
 | `--baseSz` | Cond. | - | Base currency investment — spot grid only |
 | `--direction` | Cond. | - | `long`, `short`, or `neutral` — contract grid only |
 | `--lever` | Cond. | - | Leverage (e.g., `5`) — contract grid only |
-| `--sz` | Cond. | - | Number of contracts to invest — contract grid only |
+| `--sz` | Cond. | - | Investment margin in USDT — contract grid only |
 | `--basePos` / `--no-basePos` | No | `true` | Open a base position at creation — contract grid only (ignored for neutral direction). Default is `true` (opens base position). Use `--no-basePos` to disable. |
 
 ---
@@ -622,7 +622,7 @@ okx bot dca create --type contract --instId BTC-USDT-SWAP \
 - **Insufficient balance**: check `okx-cex-portfolio` → `account balance` before creating. If insufficient, **do NOT auto-transfer** — report the shortfall and ask the user for instructions (see Step 2)
 - **Contract grid direction**: `long` (buys more at lower prices), `short` (sells at higher), `neutral` (both)
 - **Contract grid basePos**: defaults to `true` — long/short grids automatically open a base position at creation. Neutral direction ignores this. Pass `--no-basePos` to disable.
-- **Contract grid --sz**: number of contracts, not USDT amount
+- **Contract grid --sz**: investment margin in USDT (not number of contracts)
 - **Stop type**: `stopType 1` sells/closes all; `stopType 2` keeps assets; `stopType 5/6` for contract grid positions
 - **Already stopped bot**: stop returns error — check `bot grid orders --history` first to confirm state
 - **Demo mode**: `okx --profile demo bot grid create ...` — safe for testing, no real funds

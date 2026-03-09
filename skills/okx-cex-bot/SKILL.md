@@ -692,6 +692,8 @@ When communicating with users, use the display name instead of the raw API field
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
 | `triggerType` | Trigger mode (1=instant, 2=RSI) | 触发方式（1=立即, 2=RSI 信号） |
 
+> **`slPct` stop-loss logic (spot DCA)**: Stop-loss price = initial order fill price × (1 − slPct). When the stop-loss price is triggered and the position is fully closed, the bot ends.
+
 #### DCA Bot — Contract (`--type contract`)
 
 | API Field | Display Name (EN) | Display Name (ZH) |
@@ -707,6 +709,12 @@ When communicating with users, use the display name instead of the raw API field
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
 | `lever` | Leverage | 杠杆倍数 |
 | `side` | Direction (buy=long, sell=short) | 方向（buy=做多, sell=做空） |
+
+> **`slPct` stop-loss logic (contract DCA)**:
+> - Long (`side=buy`): stop-loss price = initial order fill price × (1 − slPct)
+> - Short (`side=sell`): stop-loss price = initial order fill price × (1 + slPct)
+>
+> When the stop-loss price is triggered and the position is fully closed, the bot ends.
 
 ### Interaction Rules
 

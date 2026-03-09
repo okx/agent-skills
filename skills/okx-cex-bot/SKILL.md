@@ -193,11 +193,11 @@ okx bot grid details --algoOrdType grid --algoId <algoId>
 # Stop a grid bot (keep assets as-is)
 okx bot grid stop --algoId <algoId> --algoOrdType grid --instId BTC-USDT --stopType 2
 
-# Create a DCA bot on BTC (3% TP, 3 safety orders, each triggers at 5% drop)
+# Create a DCA bot on BTC (3% TP, 5% SL, 3 safety orders, each triggers at 5% drop)
 okx bot dca create --instId BTC-USDT \
   --initOrdAmt 50 --safetyOrdAmt 30 --maxSafetyOrds 3 \
   --pxSteps 0.05 --pxStepsMult 1 --volMult 1 \
-  --tpPct 0.03 --triggerType 1
+  --tpPct 0.03 --slPct 0.05 --triggerType 1
 
 # List all active spot DCA bots
 okx bot dca orders
@@ -273,7 +273,7 @@ okx bot dca stop --algoId <algoId> --instId BTC-USDT --stopType 1
 3. okx-cex-bot       okx bot dca create --instId ETH-USDT \
                        --initOrdAmt 100 --safetyOrdAmt 50 --maxSafetyOrds 5 \
                        --pxSteps 0.03 --pxStepsMult 1 --volMult 1 \
-                       --tpPct 0.02 --triggerType 1
+                       --tpPct 0.02 --slPct 0.05 --triggerType 1
 4. okx-cex-bot       okx bot dca orders                             → confirm bot is active
 5. okx-cex-bot       okx bot dca details --algoId <id>              → monitor PnL
 ```
@@ -288,8 +288,8 @@ okx bot dca stop --algoId <algoId> --instId BTC-USDT --stopType 1
 3. okx-cex-bot       okx bot dca create --type contract --instId BTC-USDT-SWAP \
                        --initOrdAmt 200 --safetyOrdAmt 100 --maxSafetyOrds 3 \
                        --pxSteps 0.03 --pxStepsMult 1.2 --volMult 1.5 \
-                       --tpPct 0.03 --lever 3 --side sell
-                       # For long: --side buy
+                       --tpPct 0.03 --lever 3 --direction short
+                       # For long: --direction long
 4. okx-cex-bot       okx bot dca orders --type contract             → confirm active
 5. okx-cex-bot       okx bot dca details --type contract --algoId <id> → monitor PnL
 ```
@@ -348,7 +348,7 @@ Before any authenticated command:
     - Contract grid: `--direction` (`long`/`short`/`neutral`), `--lever`, `--sz` (investment margin in USDT); `--basePos` defaults to `true` (open base position for long/short)
 - DCA create: confirm `--initOrdAmt`, `--safetyOrdAmt`, `--maxSafetyOrds`, `--pxSteps`, `--tpPct`
     - Spot DCA: requires `--triggerType` (`1`=instant, `2`=RSI); default `--type spot`
-    - Contract DCA: add `--type contract`, `--lever`, and `--side` (`buy`=long, `sell`=short)
+    - Contract DCA: add `--type contract`, `--lever`, and `--direction` (`long`/`short`)
 - Grid stop: confirm `--stopType` (default omitted → keep assets; `1`=sell all to quote)
 - DCA stop: confirm `--stopType` (`1`=sell base to quote, default; `2`=keep base)
 - Demo dry-run: suggest `okx --profile demo bot grid create ...` when user is unsure
@@ -458,62 +458,71 @@ okx bot grid sub-orders --algoOrdType <type> --algoId <id> [--live] [--json]
 okx bot dca create --instId <id> \
   --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
   --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> \
-  --tpPct <ratio> [--slPct <ratio>] \
+  --tpPct <ratio> --slPct <ratio> \
   --triggerType <1|2> \
   [--reserveFunds <true|false>] [--json]
 
 # Contract DCA
 okx bot dca create --type contract --instId <id> \
-  --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
-  --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> \
-  --tpPct <ratio> [--slPct <ratio>] \
-  --lever <n> --side <buy|sell> \
-  [--reserveFunds <true|false>] [--json]
+  --initOrdAmt <n> --maxSafetyOrds <n> --tpPct <ratio> \
+  --lever <n> --direction <long|short> \
+  [--safetyOrdAmt <n>] [--pxSteps <ratio>] [--pxStepsMult <mult>] [--volMult <mult>] \
+  [--slPct <ratio>] [--slMode <limit|market>] [--allowReinvest <true|false>] \
+  [--triggerStrategy <instant|price|rsi>] [--triggerPx <price>] [--json]
 ```
 
 | Param | Required | Default | Description |
 |---|---|---|---|
 | `--type` | No | `spot` | `spot` or `contract` |
 | `--instId` | Yes | - | Instrument (e.g., `BTC-USDT` for spot, `BTC-USDT-SWAP` for contract) |
-| `--initOrdAmt` | Yes | - | Initial order amount in USDT |
-| `--safetyOrdAmt` | Yes | - | Safety order amount in USDT |
-| `--maxSafetyOrds` | Yes | - | Max number of safety orders (e.g., `3`) |
-| `--pxSteps` | Yes | - | Price drop % per safety order (e.g., `0.03` = 3%) |
-| `--pxStepsMult` | Yes | - | Price step multiplier between safety orders (e.g., `1.2`) |
-| `--volMult` | Yes | - | Safety order size multiplier (e.g., `1.5`) |
+| `--initOrdAmt` | Yes | - | Initial order amount (quote currency) |
+| `--safetyOrdAmt` | Spot: Yes, Contract: No | - | Safety order amount (quote currency) |
+| `--maxSafetyOrds` | Yes | - | Max number of safety orders (e.g., `3`; contract: `0` = no DCA) |
+| `--pxSteps` | Spot: Yes, Contract: No | - | Initial price deviation percentage (e.g., `0.03` = 3%) |
+| `--pxStepsMult` | Spot: Yes, Contract: No | - | Price step multiplier between safety orders (e.g., `1.2`) |
+| `--volMult` | Spot: Yes, Contract: No | - | Safety order size multiplier (e.g., `1.5`) |
 | `--tpPct` | Yes | - | Take-profit ratio (e.g., `0.03` = 3%) |
-| `--slPct` | No | - | Stop-loss ratio (e.g., `0.05` = 5%) |
-| `--reserveFunds` | No | `false` | Pre-reserve full required assets upfront |
-| `--triggerType` | Spot only | - | `1`=instant start, `2`=RSI signal trigger |
+| `--slPct` | Spot: Yes, Contract: No | - | Stop-loss ratio (e.g., `0.05` = 5%) |
+| `--reserveFunds` | Spot only | `false` | Pre-reserve full required assets upfront (not applicable for contract) |
+| `--triggerType` | Spot only | - | `1`=instant start, `2`=RSI signal trigger (RSI params not currently supported) |
 | `--lever` | Contract only | - | Leverage multiplier (e.g., `3`) |
-| `--side` | Contract only | - | `buy`=long, `sell`=short |
+| `--direction` | Contract only | - | `long` or `short` (spot is always `long`) |
+| `--slMode` | Contract only | `market` | Stop-loss price type: `limit` (limit price) or `market` (market price) |
+| `--allowReinvest` | Contract only | `true` | Reinvest profit into the next DCA cycle |
+| `--triggerStrategy` | Contract only | `instant` | How the bot starts: `instant`, `price` (wait for trigger price), or `rsi` (RSI signal) |
+| `--triggerPx` | Contract only | - | Trigger price — required when `triggerStrategy=price` |
 
 ---
 
 ### DCA Bot — Stop
 
 ```bash
-okx bot dca stop [--type <spot|contract>] --algoId <id> --instId <id> \
-  [--stopType <1|2>] [--json]
+# Spot DCA (requires instId and stopType)
+okx bot dca stop --algoId <id> --instId <id> --stopType <1|2> [--json]
+
+# Contract DCA (only algoId needed)
+okx bot dca stop --type contract --algoId <id> [--json]
 ```
 
-| `--stopType` | Behavior |
-|---|---|
-| `1` | Sell base currency to quote at market (cash out) — default |
-| `2` | Keep base currency as-is |
+| Param | Spot | Contract | Description |
+|---|---|---|---|
+| `--algoId` | Required | Required | Strategy id |
+| `--instId` | Required | Not used | Instrument ID, e.g. BTC-USDT |
+| `--stopType` | Required | Not used | `1`=stop & sell base to quote; `2`=stop without sell |
 
 ---
 
 ### DCA Bot — List Orders
 
 ```bash
-okx bot dca orders [--type <spot|contract>] [--history] [--json]
+okx bot dca orders [--type <spot|contract>] [--history] [--instId <id>] [--json]
 ```
 
 | Param | Required | Default | Description |
 |---|---|---|---|
 | `--type` | No | `spot` | `spot` or `contract` |
 | `--history` | No | false | Show completed/stopped bots instead of active |
+| `--instId` | No | - | [contract only] Filter by instrument, e.g. `BTC-USDT-SWAP` |
 
 ---
 
@@ -523,7 +532,7 @@ okx bot dca orders [--type <spot|contract>] [--history] [--json]
 okx bot dca details [--type <spot|contract>] --algoId <id> [--json]
 ```
 
-Returns: bot config, current PnL (`pnlRatio`), safety orders triggered, state. Contract also returns `direction`, `lever`, `avgPx`.
+Returns: Spot — bot config, current PnL (`pnlRatio`), safety orders triggered, state. Contract — position details including `avgPx`, `upl`, `liqPx`, `sz`, `tpPx`, `slPx`, `initPx`, `fundingFee`, `fee`, `fillSafetyOrds`.
 
 ---
 
@@ -537,8 +546,8 @@ okx bot dca sub-orders [--type <spot|contract>] --algoId <id> [--live] [--cycleI
 |---|---|
 | *(default, spot)* | Filled sub-orders (executed DCA buys) |
 | `--live` | Spot: pending orders currently on the book |
+| `--cycleId <id>` | Spot: optional filter by cycle. Contract: show orders within a specific cycle (omit to list all cycles) |
 | *(default, contract)* | List all cycles |
-| `--cycleId <id>` | Contract: show orders within a specific cycle |
 
 ---
 
@@ -581,12 +590,12 @@ okx bot grid details --algoOrdType grid --algoId 12345678
 okx bot grid stop --algoId 12345678 --algoOrdType grid --instId BTC-USDT --stopType 2
 ```
 
-**"Create a DCA bot on ETH: $100 initial, safety orders at 3% drops, 2% TP"**
+**"Create a DCA bot on ETH: $100 initial, safety orders at 3% drops, 2% TP, 5% SL"**
 ```bash
 okx bot dca create --instId ETH-USDT \
   --initOrdAmt 100 --safetyOrdAmt 50 --maxSafetyOrds 3 \
   --pxSteps 0.03 --pxStepsMult 1 --volMult 1 \
-  --tpPct 0.02 --triggerType 1
+  --tpPct 0.02 --slPct 0.05 --triggerType 1
 # → DCA bot created: 87654321 (OK)
 ```
 
@@ -611,7 +620,7 @@ okx bot dca stop --algoId 87654321 --instId ETH-USDT --stopType 1
 okx bot dca create --type contract --instId BTC-USDT-SWAP \
   --initOrdAmt 200 --safetyOrdAmt 100 --maxSafetyOrds 3 \
   --pxSteps 0.03 --pxStepsMult 1.2 --volMult 1.5 \
-  --tpPct 0.02 --lever 3 --side buy
+  --tpPct 0.02 --lever 3 --direction long
 ```
 
 ## Edge Cases
@@ -632,10 +641,10 @@ okx bot dca create --type contract --instId BTC-USDT-SWAP \
 - **Insufficient balance**: check `okx-cex-portfolio` → `account balance` before creating. If insufficient, **do NOT auto-transfer** — report the shortfall and ask the user for instructions (see Step 2)
 - **pxStepsMult**: use `1.0` for equal price spacing; `>1.0` to widen gaps between successive safety orders
 - **volMult**: use `1.0` for equal safety order sizes; `>1.0` to increase size per safety order (Martingale)
-- **triggerType 2 (RSI)**: requires additional RSI parameters — use `1` (instant) unless specifically requested
-- **Stop type**: `stopType 1` sells base to quote (cash out); `stopType 2` keeps base currency as-is
+- **triggerType 2 (RSI)**: RSI trigger parameters are not currently supported in the CLI/MCP tools — always use `1` (instant)
+- **Stop type (spot only)**: `stopType 1` sells base to quote (cash out); `stopType 2` keeps base currency as-is. Contract DCA stop does not use `instId` or `stopType`.
 - **Already stopped bot**: stop returns error — check `bot dca orders --history` first to confirm state
-- **Contract DCA**: add `--type contract` to any DCA CLI command; create also requires `--lever` and `--side`
+- **Contract DCA**: add `--type contract` to any DCA CLI command; create also requires `--lever` and `--direction` (`long`/`short`)
 
 ## Communication Guidelines
 

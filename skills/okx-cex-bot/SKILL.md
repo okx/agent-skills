@@ -670,7 +670,7 @@ When communicating with users, use the display name instead of the raw API field
 | `minPx` | Lower price bound | 网格下限价格 |
 | `maxPx` | Upper price bound | 网格上限价格 |
 | `gridNum` | Number of grids | 网格数量 |
-| `sz` | Number of contracts | 合约张数 |
+| `sz` | Investment margin ({quote}) | 投入保证金（{quote}） |
 | `direction` | Direction (long / short / neutral) | 方向（做多 / 做空 / 中性） |
 | `lever` | Leverage | 杠杆倍数 |
 | `runType` | Spacing mode (1=arithmetic, 2=geometric) | 网格间距模式（1=等差, 2=等比） |
@@ -691,6 +691,7 @@ When communicating with users, use the display name instead of the raw API field
 | `tpPct` | Take-profit ratio (%) | 止盈比例（%） |
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
 | `triggerType` | Trigger mode (1=instant, 2=RSI) | 触发方式（1=立即, 2=RSI 信号） |
+| `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
 
 > **`slPct` stop-loss logic (spot DCA)**: Stop-loss price = initial order fill price × (1 − slPct). When the stop-loss price is triggered and the position is fully closed, the bot ends.
 
@@ -709,12 +710,15 @@ When communicating with users, use the display name instead of the raw API field
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
 | `lever` | Leverage | 杠杆倍数 |
 | `side` | Direction (buy=long, sell=short) | 方向（buy=做多, sell=做空） |
+| `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
 
 > **`slPct` stop-loss logic (contract DCA)**:
 > - Long (`side=buy`): stop-loss price = initial order fill price × (1 − slPct)
 > - Short (`side=sell`): stop-loss price = initial order fill price × (1 + slPct)
 >
 > When the stop-loss price is triggered and the position is fully closed, the bot ends.
+>
+> ⚠ **Known bug**: `slPct` is accepted by the OKX API but the current okx-trade-mcp contract DCA handler does not pass it through. Until fixed, use the MCP tool directly or patch the handler.
 
 ### Interaction Rules
 
@@ -723,7 +727,7 @@ When collecting parameters from the user, always use natural language — never 
 - Ask "What price range for the grid? (lower ~ upper)" — not "Enter minPx and maxPx"
 - Ask "How many grids?" — not "Enter gridNum"
 - Spot: ask "How much to invest (USDT)?" (use the actual quote currency) — not "Enter quoteSz"
-- Contract: ask "How many contracts?" or "How much margin (USDT)?" — not "Enter sz"
+- Contract: ask "How much margin to invest (USDT)?" (use the actual quote currency) — not "Enter sz"
 - Ask "What leverage?" — not "Enter lever"
 - Ask "Take-profit target (%)?" — not "Enter tpPct"
 - Ask "How many safety orders at most?" — not "Enter maxSafetyOrds"

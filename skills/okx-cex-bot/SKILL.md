@@ -458,7 +458,7 @@ okx bot grid sub-orders --algoOrdType <type> --algoId <id> [--live] [--json]
 okx bot dca create --instId <id> \
   --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
   --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> \
-  --tpPct <ratio> [--slPct <ratio>] \
+  --tpPct <ratio> [--slPct <ratio>] [--slMode <limit|market>] \
   --triggerType <1|2> \
   [--reserveFunds <true|false>] [--json]
 
@@ -466,7 +466,7 @@ okx bot dca create --instId <id> \
 okx bot dca create --type contract --instId <id> \
   --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
   --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> \
-  --tpPct <ratio> [--slPct <ratio>] \
+  --tpPct <ratio> [--slPct <ratio> --slMode <limit|market>] \
   --lever <n> --side <buy|sell> \
   [--reserveFunds <true|false>] [--json]
 ```
@@ -482,7 +482,8 @@ okx bot dca create --type contract --instId <id> \
 | `--pxStepsMult` | Yes | - | Price step multiplier between safety orders (e.g., `1.2`) |
 | `--volMult` | Yes | - | Safety order size multiplier (e.g., `1.5`) |
 | `--tpPct` | Yes | - | Take-profit ratio (e.g., `0.03` = 3%) |
-| `--slPct` | No | - | Stop-loss ratio (e.g., `0.05` = 5%) |
+| `--slPct` | No | - | Stop-loss ratio (e.g., `0.05` = 5%). Must be > total price deviation of all safety orders |
+| `--slMode` | No | - | Stop-loss price type: `limit` or `market`. **Required when `--slPct` is set** |
 | `--reserveFunds` | No | `false` | Pre-reserve full required assets upfront |
 | `--triggerType` | Spot only | - | `1`=instant start, `2`=RSI signal trigger |
 | `--lever` | Contract only | - | Leverage multiplier (e.g., `3`) |
@@ -606,12 +607,12 @@ okx bot dca details --algoId 87654321
 okx bot dca stop --algoId 87654321 --instId ETH-USDT --stopType 1
 ```
 
-**"Create a contract DCA bot on BTC perp, long, 3x leverage, 2% TP"**
+**"Create a contract DCA bot on BTC perp, long, 3x leverage, 2% TP, 15% SL"**
 ```bash
 okx bot dca create --type contract --instId BTC-USDT-SWAP \
   --initOrdAmt 200 --safetyOrdAmt 100 --maxSafetyOrds 3 \
   --pxSteps 0.03 --pxStepsMult 1.2 --volMult 1.5 \
-  --tpPct 0.02 --lever 3 --side buy
+  --tpPct 0.02 --slPct 0.15 --slMode market --lever 3 --side buy
 ```
 
 ## Edge Cases
@@ -642,6 +643,98 @@ okx bot dca create --type contract --instId BTC-USDT-SWAP \
 - **Use "bot" not "strategy"** when referring to grid or DCA in user-facing responses (e.g., "grid bot", "DCA bot" — not "grid strategy" or "DCA strategy").
 - **Always refer to DCA bots as "DCA"** — do not translate to "定投" or "recurring buy". The underlying mechanism is Martingale (马丁格尔), not simple dollar cost averaging. Use "DCA" in all user-facing responses regardless of language.
 - **Grid bot** can be referred to as "网格" in Chinese contexts.
+
+### Parameter Display Names
+
+When communicating with users, use the display name instead of the raw API field name. The API field is for internal mapping only.
+
+> **Currency placeholders**: `{base}` and `{quote}` refer to the actual currencies from the trading pair. Extract them by splitting `instId` on `-`: for `BTC-USDT` → base=BTC, quote=USDT; for `ETH-USDC` → base=ETH, quote=USDC; for `BTC-USDT-SWAP` → base=BTC, quote=USDT (ignore the SWAP suffix).
+
+#### Grid Bot — Spot (`algoOrdType=grid`)
+
+| API Field | Display Name (EN) | Display Name (ZH) |
+|---|---|---|
+| `instId` | Trading pair | 交易对 |
+| `minPx` | Lower price bound | 网格下限价格 |
+| `maxPx` | Upper price bound | 网格上限价格 |
+| `gridNum` | Number of grids | 网格数量 |
+| `quoteSz` | Investment amount ({quote}) | 投入金额（{quote}） |
+| `baseSz` | Investment amount ({base}) | 投入金额（{base}） |
+| `runType` | Spacing mode (1=arithmetic, 2=geometric) | 网格间距模式（1=等差, 2=等比） |
+| `stopType` | Stop behavior | 停止方式 |
+
+#### Grid Bot — Contract (`algoOrdType=contract_grid`)
+
+| API Field | Display Name (EN) | Display Name (ZH) |
+|---|---|---|
+| `instId` | Trading pair | 交易对 |
+| `minPx` | Lower price bound | 网格下限价格 |
+| `maxPx` | Upper price bound | 网格上限价格 |
+| `gridNum` | Number of grids | 网格数量 |
+| `sz` | Investment margin ({quote}) | 投入保证金（{quote}） |
+| `direction` | Direction (long / short / neutral) | 方向（做多 / 做空 / 中性） |
+| `lever` | Leverage | 杠杆倍数 |
+| `runType` | Spacing mode (1=arithmetic, 2=geometric) | 网格间距模式（1=等差, 2=等比） |
+| `basePos` | Open base position | 是否开底仓 |
+| `stopType` | Stop behavior | 停止方式 |
+
+#### DCA Bot — Spot (default)
+
+| API Field | Display Name (EN) | Display Name (ZH) |
+|---|---|---|
+| `instId` | Trading pair | 交易对 |
+| `initOrdAmt` | Initial order amount ({quote}) | 首单金额（{quote}） |
+| `safetyOrdAmt` | Safety order amount ({quote}) | 补仓金额（{quote}） |
+| `maxSafetyOrds` | Max safety orders | 最大补仓次数 |
+| `pxSteps` | Price drop per safety order (%) | 补仓价格跌幅（%） |
+| `pxStepsMult` | Price step multiplier | 补仓跌幅倍数 |
+| `volMult` | Safety order size multiplier | 补仓金额倍数 |
+| `tpPct` | Take-profit ratio (%) | 止盈比例（%） |
+| `slPct` | Stop-loss ratio (%) | 止损比例（%） |
+| `slMode` | Stop-loss type (limit / market) | 止损类型（限价 / 市价） |
+| `triggerType` | Trigger mode (1=instant, 2=RSI) | 触发方式（1=立即, 2=RSI 信号） |
+| `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
+
+> **`slPct` stop-loss logic (spot DCA)**: Stop-loss price = initial order fill price × (1 − slPct). When the stop-loss price is triggered and the position is fully closed, the bot ends.
+
+#### DCA Bot — Contract (`--type contract`)
+
+| API Field | Display Name (EN) | Display Name (ZH) |
+|---|---|---|
+| `instId` | Trading pair | 交易对 |
+| `initOrdAmt` | Initial margin ({quote}) | 首单保证金（{quote}） |
+| `safetyOrdAmt` | Safety order margin ({quote}) | 补仓保证金（{quote}） |
+| `maxSafetyOrds` | Max safety orders | 最大补仓次数 |
+| `pxSteps` | Price drop per safety order (%) | 补仓价格跌幅（%） |
+| `pxStepsMult` | Price step multiplier | 补仓跌幅倍数 |
+| `volMult` | Safety order size multiplier | 补仓金额倍数 |
+| `tpPct` | Take-profit ratio (%) | 止盈比例（%） |
+| `slPct` | Stop-loss ratio (%) | 止损比例（%） |
+| `slMode` | Stop-loss type (limit / market) | 止损类型（限价 / 市价） |
+| `lever` | Leverage | 杠杆倍数 |
+| `side` | Direction (buy=long, sell=short) | 方向（buy=做多, sell=做空） |
+| `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
+
+> **`slPct` stop-loss logic (contract DCA)**:
+> - Long (`side=buy`): stop-loss price = initial order fill price × (1 − slPct)
+> - Short (`side=sell`): stop-loss price = initial order fill price × (1 + slPct)
+>
+> When the stop-loss price is triggered and the position is fully closed, the bot ends.
+>
+
+### Interaction Rules
+
+When collecting parameters from the user, always use natural language — never expose raw API field names.
+
+- Ask "What price range for the grid? (lower ~ upper)" — not "Enter minPx and maxPx"
+- Ask "How many grids?" — not "Enter gridNum"
+- Spot: ask "How much to invest (USDT)?" (use the actual quote currency) — not "Enter quoteSz"
+- Contract: ask "How much margin to invest (USDT)?" (use the actual quote currency) — not "Enter sz"
+- Ask "What leverage?" — not "Enter lever"
+- Ask "Take-profit target (%)?" — not "Enter tpPct"
+- Ask "How many safety orders at most?" — not "Enter maxSafetyOrds"
+
+If the user already provides values in their initial request, do not re-ask — map them directly to the corresponding API fields.
 
 ## Global Notes
 

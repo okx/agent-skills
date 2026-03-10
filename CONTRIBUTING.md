@@ -22,7 +22,7 @@ license: MIT
 metadata:
   author: your-name-or-org
   version: "1.0.0"
-  moltbot:
+  agent:
     requires:
       bins: ["cli-tool-name"]
 ---

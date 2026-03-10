@@ -31,7 +31,7 @@ license: Apache-2.0
 metadata:
   author: okx
   version: "1.0.0"
-  moltbot:
+  agent:
     requires:
       bins: ["okx"]
 ---
@@ -41,7 +41,7 @@ The `description` field is used by the agent to decide when to activate the skil
 
 ## Usage
 
-Skills are loaded by AI agents (e.g. via [MoltBot](https://moltbot.ai) or compatible agent frameworks) to provide contextual instructions for CLI-based tasks. The agent reads the skill document and follows the command examples and operation flows described within.
+Skills are loaded by AI agents to provide contextual instructions for CLI-based tasks. The agent reads the skill document and follows the command examples and operation flows described within.
 
 ## Contributing
 

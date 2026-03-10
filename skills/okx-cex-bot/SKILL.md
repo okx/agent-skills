@@ -720,12 +720,14 @@ When communicating with users, use the display name instead of the raw API field
 | `slPct` | Stop-loss ratio (%) | 止损比例（%） |
 | `slMode` | Stop-loss type (limit / market) | 止损类型（限价 / 市价） |
 | `lever` | Leverage | 杠杆倍数 |
-| `side` | Direction (buy=long, sell=short) | 方向（buy=做多, sell=做空） |
-| `reserveFunds` | Reserve full assets upfront | 是否预留全部资金 |
+| `direction` | Direction (long / short) | 方向（做多 / 做空） |
+| `allowReinvest` | Reinvest profit into next cycle | 利润再投入下一轮 |
+| `triggerStrategy` | Trigger mode (instant / price / rsi) | 触发方式（立即 / 价格 / RSI） |
+| `triggerPx` | Trigger price (for price mode) | 触发价格（价格模式时） |
 
 > **`slPct` stop-loss logic (contract DCA)**:
-> - Long (`side=buy`): stop-loss price = initial order fill price × (1 − slPct)
-> - Short (`side=sell`): stop-loss price = initial order fill price × (1 + slPct)
+> - Long (`direction=long`): stop-loss price = initial order fill price × (1 − slPct)
+> - Short (`direction=short`): stop-loss price = initial order fill price × (1 + slPct)
 >
 > When the stop-loss price is triggered and the position is fully closed, the bot ends.
 >

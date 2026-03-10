@@ -195,7 +195,8 @@ okx bot grid stop --algoId <algoId> --algoOrdType grid --instId BTC-USDT --stopT
 
 # Create a contract DCA bot on BTC perp (long, 3x leverage, 3% TP)
 okx bot dca create --instId BTC-USDT-SWAP --lever 3 --direction long \
-  --initOrdAmt 100 --maxSafetyOrds 3 --tpPct 0.03
+  --initOrdAmt 100 --safetyOrdAmt 50 --maxSafetyOrds 3 \
+  --pxSteps 0.03 --pxStepsMult 1 --volMult 1 --tpPct 0.03
 
 # List all active contract DCA bots
 okx bot dca orders
@@ -268,7 +269,8 @@ okx bot dca stop --algoId <algoId>
         ↓ user approves
 3. okx-cex-bot       okx bot dca create --instId BTC-USDT-SWAP \
                        --lever 3 --direction long \
-                       --initOrdAmt 200 --maxSafetyOrds 3 --tpPct 0.03
+                       --initOrdAmt 200 --safetyOrdAmt 100 --maxSafetyOrds 3 \
+                       --pxSteps 0.03 --pxStepsMult 1 --volMult 1 --tpPct 0.03
                        # For short: --direction short
 4. okx-cex-bot       okx bot dca orders                             → confirm active
 5. okx-cex-bot       okx bot dca details --algoId <id>              → monitor PnL
@@ -325,7 +327,7 @@ Before any authenticated command:
 - Grid create: confirm `--minPx`, `--maxPx`, `--gridNum`; verify `--minPx` < current price < `--maxPx`; confirm investment size
     - Spot grid: `--quoteSz` (USDT) or `--baseSz` (base currency)
     - Contract grid: `--direction` (`long`/`short`/`neutral`), `--lever`, `--sz` (investment margin in USDT); `--basePos` defaults to `true` (open base position for long/short)
-- DCA create: confirm `--instId`, `--lever`, `--direction`, `--initOrdAmt`, `--maxSafetyOrds`, `--tpPct`; optional: `--safetyOrdAmt`, `--pxSteps`, `--pxStepsMult`, `--volMult`, `--slPct`, `--slMode`, `--allowReinvest`, `--triggerStrategy`, `--triggerPx`
+- DCA create: confirm `--instId`, `--lever`, `--direction`, `--initOrdAmt`, `--safetyOrdAmt`, `--maxSafetyOrds`, `--pxSteps`, `--pxStepsMult`, `--volMult`, `--tpPct`; optional: `--slPct`, `--slMode`, `--allowReinvest`, `--triggerStrategy`, `--triggerPx`
 - Grid stop: confirm `--stopType` (default omitted → keep assets; `1`=sell all to quote)
 - DCA stop: only `--algoId` needed
 - Demo dry-run: suggest `okx --profile demo bot grid create ...` when user is unsure
@@ -432,8 +434,8 @@ okx bot grid sub-orders --algoOrdType <type> --algoId <id> [--live] [--json]
 
 ```bash
 okx bot dca create --instId <id> --lever <n> --direction <long|short> \
-  --initOrdAmt <n> --maxSafetyOrds <n> --tpPct <ratio> \
-  [--safetyOrdAmt <n>] [--pxSteps <ratio>] [--pxStepsMult <mult>] [--volMult <mult>] \
+  --initOrdAmt <n> --safetyOrdAmt <n> --maxSafetyOrds <n> \
+  --pxSteps <ratio> --pxStepsMult <mult> --volMult <mult> --tpPct <ratio> \
   [--slPct <ratio>] [--slMode <limit|market>] [--allowReinvest <true|false>] \
   [--triggerStrategy <instant|price|rsi>] [--triggerPx <price>] [--json]
 ```
@@ -445,11 +447,11 @@ okx bot dca create --instId <id> --lever <n> --direction <long|short> \
 | `--direction` | Yes | - | `long` or `short` |
 | `--initOrdAmt` | Yes | - | Initial order margin (quote currency) |
 | `--maxSafetyOrds` | Yes | - | Max number of safety orders (e.g., `3`; `0` = no DCA) |
+| `--safetyOrdAmt` | Yes | - | Safety order margin (quote currency) |
+| `--pxSteps` | Yes | - | Initial price deviation percentage (e.g., `0.03` = 3%) |
+| `--pxStepsMult` | Yes | - | Price step multiplier between safety orders (e.g., `1.2`) |
+| `--volMult` | Yes | - | Safety order size multiplier (e.g., `1.5`) |
 | `--tpPct` | Yes | - | Take-profit ratio (e.g., `0.03` = 3%) |
-| `--safetyOrdAmt` | No | - | Safety order margin (quote currency) |
-| `--pxSteps` | No | - | Initial price deviation percentage (e.g., `0.03` = 3%) |
-| `--pxStepsMult` | No | - | Price step multiplier between safety orders (e.g., `1.2`) |
-| `--volMult` | No | - | Safety order size multiplier (e.g., `1.5`) |
 | `--slPct` | No | - | Stop-loss ratio (e.g., `0.05` = 5%) |
 | `--slMode` | No | `market` | Stop-loss price type: `limit` (limit price) or `market` (market price) |
 | `--allowReinvest` | No | `true` | Reinvest profit into the next DCA cycle |
@@ -548,7 +550,8 @@ okx bot grid stop --algoId 12345678 --algoOrdType grid --instId BTC-USDT --stopT
 **"Create a DCA bot on BTC perp, long, 3x leverage, 3% TP"**
 ```bash
 okx bot dca create --instId BTC-USDT-SWAP --lever 3 --direction long \
-  --initOrdAmt 200 --maxSafetyOrds 3 --tpPct 0.03
+  --initOrdAmt 200 --safetyOrdAmt 100 --maxSafetyOrds 3 \
+  --pxSteps 0.03 --pxStepsMult 1 --volMult 1 --tpPct 0.03
 # → DCA bot created: 87654321 (OK)
 ```
 
@@ -598,7 +601,7 @@ okx bot dca stop --algoId 87654321
 - **triggerStrategy**: `instant` (default) starts immediately; `price` waits for a trigger price; `rsi` uses RSI signals
 - **Stop**: only `--algoId` is needed — no `instId` or `stopType` required
 - **Already stopped bot**: stop returns error — check `bot dca orders --history` first to confirm state
-- **DCA create requires**: `--instId`, `--lever`, `--direction` (`long`/`short`), `--initOrdAmt`, `--maxSafetyOrds`, `--tpPct`
+- **DCA create requires**: `--instId`, `--lever`, `--direction` (`long`/`short`), `--initOrdAmt`, `--safetyOrdAmt`, `--maxSafetyOrds`, `--pxSteps`, `--pxStepsMult`, `--volMult`, `--tpPct`
 
 ## Communication Guidelines
 

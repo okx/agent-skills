@@ -6,7 +6,7 @@ metadata:
   author: okx
   version: "1.0.0"
   homepage: "https://www.okx.com"
-  moltbot:
+  agent:
     requires:
       bins: ["okx"]
     install:

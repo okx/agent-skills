@@ -1,28 +1,53 @@
 # Security Policy
 
-## Scope
+## Supported Versions
 
-This repository contains **documentation files only** (Markdown skill definitions). There is no executable code, no server, and no data storage in this repository.
+| Version | Supported |
+|---------|-----------|
+| Latest release | ✅ |
+| Previous minor | ✅ security fixes only |
+| Older versions | ❌ |
 
-However, the skills in this repo instruct AI agents to interact with the OKX exchange via the `okx` CLI, which handles real API credentials and can execute live trades. The following guidance applies to that context.
-
-## Credential Safety
-
-- **Never commit API keys, secret keys, or passphrases** to this repository or include them in skill documents
-- Skills reference credential paths (`~/.okx/config.toml`) or environment variables — never inline values
-- If you accidentally commit credentials, rotate them immediately via the OKX API management portal
+We recommend always running the latest published version.
 
 ## Reporting a Vulnerability
 
-If you discover a security issue in this repository (e.g., a skill document that could mislead an AI agent into unsafe behavior, credential leakage patterns, or prompt injection risks):
+**Please do NOT open a public GitHub issue for security vulnerabilities.**
 
-1. **Do not open a public GitHub issue**
-2. Report privately by emailing the maintainers or using GitHub's private security advisory feature
-3. Include a description of the issue and potential impact
+Report security issues privately via:
 
-We will acknowledge reports within 3 business days and aim to address confirmed issues within 14 days.
+- **GitHub Private Advisory:** Use the [Report a vulnerability](../../security/advisories/new) button on the Security tab of this repository.
+- **Email:** security@okx.com
 
-## Out of Scope
+Include as much detail as possible: description of the issue, steps to reproduce, potential impact, and any suggested mitigations.
 
-- Vulnerabilities in the `okx` CLI itself — report those to the [okx-trade-mcp](https://github.com/okx/okx-trade-mcp) repository
-- Vulnerabilities in the OKX exchange platform — report via OKX's official security disclosure program
+## Priority Issues
+
+The following vulnerability types are treated as **highest priority** due to their potential for financial harm:
+
+- **API key / secret key leakage** — any path that could expose credentials
+- **Fund safety** — issues that could cause unintended orders, transfers, or position changes
+- **Authentication bypass** — bypassing signature verification or access controls
+
+## Response Timeline
+
+| Stage | Target |
+|-------|--------|
+| Initial acknowledgement | Within **48 hours** |
+| Triage and severity assessment | Within **3 business days** |
+| Remediation plan communicated | Within **7 days** |
+| Fix released | Depends on severity; critical issues prioritized |
+
+## Scope
+
+This project is a **skill definition layer** — Markdown documents that instruct AI agents how to use the `okx` CLI. The primary attack surfaces are:
+
+1. **Prompt injection** — skill documents are loaded directly into AI agent system prompts. A maliciously crafted skill could embed hidden instructions that override the agent's intended behavior, potentially tricking it into executing dangerous operations (e.g. unauthorized trades, credential exfiltration).
+2. **Unplanned behavior** — incorrect command examples, wrong parameter formats, or misleading operation flows in a skill could cause the agent to execute unintended trades, transfers, or position changes.
+3. **MCP tool input** — skills define the parameter patterns that AI agents pass to trading tools. Malformed or overly permissive parameter examples could lead to invalid or harmful tool invocations.
+
+Out of scope: vulnerabilities in the `okx` CLI itself (report those to [okx-trade-mcp](https://github.com/okx/agent-trade-kit)), OKX's own platform, or third-party AI agent frameworks.
+
+## Disclosure Policy
+
+We follow [responsible disclosure](https://en.wikipedia.org/wiki/Responsible_disclosure). Once a fix is released, we will credit the reporter (unless anonymity is requested) and publish a summary in the changelog.

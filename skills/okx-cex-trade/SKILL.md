@@ -133,6 +133,11 @@ okx spot place --instId BTC-USDT --side sell --ordType limit --sz 0.01 --px 1000
 okx swap place --instId BTC-USDT-SWAP --side buy --ordType market --sz 1 \
   --tdMode cross --posSide long
 
+# Long 1 contract with attached TP/SL (one step)
+okx swap place --instId BTC-USDT-SWAP --side buy --ordType market --sz 1 \
+  --tdMode cross --posSide long \
+  --tpTriggerPx 105000 --tpOrdPx -1 --slTriggerPx 88000 --slOrdPx -1
+
 # Close BTC perp long position entirely at market
 okx swap close --instId BTC-USDT-SWAP --mgnMode cross --posSide long
 
@@ -242,13 +247,13 @@ okx spot cancel --instId BTC-USDT --ordId <ordId>
 2. okx-cex-portfolio okx account max-size --instId BTC-USDT-SWAP --tdMode cross → confirm size ok
         ↓ user approves
 3. okx-cex-trade     okx swap place --instId BTC-USDT-SWAP --side buy \
-                       --ordType market --sz 5 --tdMode cross --posSide long
-4. okx-cex-trade     okx swap algo place --instId BTC-USDT-SWAP --side sell \
-                       --ordType oco --sz 5 --tdMode cross --posSide long \
+                       --ordType market --sz 5 --tdMode cross --posSide long \
                        --tpTriggerPx 105000 --tpOrdPx -1 \
                        --slTriggerPx 88000 --slOrdPx -1
-5. okx-cex-trade     okx swap positions                     → confirm position opened
+4. okx-cex-trade     okx swap positions                     → confirm position opened
 ```
+
+> **Note:** TP/SL is attached directly to the order via `--tpTriggerPx`/`--slTriggerPx` — no separate `swap algo place` step needed. Use `swap algo place` only when adding TP/SL to an **existing** position.
 
 ### Adjust leverage then place order
 > User: "Set BTC perp to 5x leverage then go long 10 contracts"
@@ -363,8 +368,8 @@ Before any authenticated command:
 
 1. **Profile** — determined in Step 0; use `--profile live` (实盘) or `--profile demo` (模拟盘)
 2. **Confirm parameters** — confirm the key order details once before executing:
-   - Spot place: confirm `--instId`, `--side`, `--ordType`, `--sz`; price (`--px`) required for limit orders
-   - Swap place: confirm `--instId`, `--side`, `--sz`, `--tdMode`; confirm `--posSide` if in hedge mode
+   - Spot place: confirm `--instId`, `--side`, `--ordType`, `--sz`; price (`--px`) required for limit orders; optionally attach TP/SL with `--tpTriggerPx`/`--slTriggerPx`
+   - Swap place: confirm `--instId`, `--side`, `--sz`, `--tdMode`; confirm `--posSide` if in hedge mode; optionally attach TP/SL with `--tpTriggerPx`/`--slTriggerPx`
    - Swap close: confirm `--instId`, `--mgnMode`, `--posSide`; closes the entire position at market
    - Swap leverage: confirm new leverage and impact on existing positions; cannot exceed exchange max
    - Algo place (TP/SL): confirm trigger prices; use `--tpOrdPx -1` for market execution at trigger
@@ -399,7 +404,10 @@ Before any authenticated command:
 
 ```bash
 okx spot place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
-  [--px <price>] [--json]
+  [--px <price>] \
+  [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
+  [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
+  [--json]
 ```
 
 | Param | Required | Default | Description |
@@ -409,6 +417,10 @@ okx spot place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 | `--ordType` | Yes | - | `market`, `limit`, `post_only`, `fok`, `ioc` |
 | `--sz` | Yes | - | Order size in base currency (e.g., BTC amount) |
 | `--px` | Cond. | - | Price — required for `limit`, `post_only`, `fok`, `ioc` |
+| `--tpTriggerPx` | No | - | Attached take-profit trigger price |
+| `--tpOrdPx` | No | - | TP order price; use `-1` for market execution |
+| `--slTriggerPx` | No | - | Attached stop-loss trigger price |
+| `--slOrdPx` | No | - | SL order price; use `-1` for market execution |
 
 ---
 
@@ -517,7 +529,10 @@ Returns: `algoId`, `instId`, type, `side`, `sz`, `tpTrigger`, `slTrigger`, `stat
 ```bash
 okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
   --tdMode <cross|isolated> \
-  [--posSide <long|short>] [--px <price>] [--json]
+  [--posSide <long|short>] [--px <price>] \
+  [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
+  [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
+  [--json]
 ```
 
 | Param | Required | Default | Description |
@@ -529,6 +544,10 @@ okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 | `--tdMode` | Yes | - | `cross` or `isolated` |
 | `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
 | `--px` | Cond. | - | Price — required for limit orders |
+| `--tpTriggerPx` | No | - | Attached take-profit trigger price |
+| `--tpOrdPx` | No | - | TP order price; use `-1` for market execution |
+| `--slTriggerPx` | No | - | Attached stop-loss trigger price |
+| `--slOrdPx` | No | - | SL order price; use `-1` for market execution |
 
 ---
 
@@ -696,8 +715,18 @@ okx swap algo orders [--instId <id>] [--history] [--ordType <type>] [--json]
 ```bash
 okx futures place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
   --tdMode <cross|isolated> \
-  [--posSide <long|short>] [--px <price>] [--reduceOnly] [--json]
+  [--posSide <long|short>] [--px <price>] [--reduceOnly] \
+  [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
+  [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
+  [--json]
 ```
+
+| Param | Required | Default | Description |
+|---|---|---|---|
+| `--tpTriggerPx` | No | - | Attached take-profit trigger price |
+| `--tpOrdPx` | No | - | TP order price; use `-1` for market execution |
+| `--slTriggerPx` | No | - | Attached stop-loss trigger price |
+| `--slOrdPx` | No | - | SL order price; use `-1` for market execution |
 
 `--instId` format: `BTC-USDT-250328` (delivery date suffix).
 
@@ -954,7 +983,15 @@ okx swap place --instId BTC-USDT-SWAP --side buy --ordType market --sz 10 \
 # → Order placed: 7890123458 (OK)
 ```
 
-**"Set take profit at $105k and stop loss at $88k on BTC perp long"**
+**"Long 10 contracts BTC perp with TP at $105k and SL at $88k"**
+```bash
+okx swap place --instId BTC-USDT-SWAP --side buy --ordType market --sz 10 \
+  --tdMode cross --posSide long \
+  --tpTriggerPx 105000 --tpOrdPx -1 --slTriggerPx 88000 --slOrdPx -1
+# → Order placed: 7890123459 (OK) — TP/SL attached via attachAlgoOrds
+```
+
+**"Set take profit at $105k and stop loss at $88k on an existing BTC perp long"**
 ```bash
 okx swap algo place --instId BTC-USDT-SWAP --side sell --ordType oco --sz 10 \
   --tdMode cross --posSide long \

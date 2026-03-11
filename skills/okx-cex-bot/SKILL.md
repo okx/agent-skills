@@ -37,48 +37,22 @@ Grid and DCA (Contract Martingale) trading bot management on OKX exchange. All g
 
    **If credentials are already configured** → proceed to step 3.
 
-   **If not configured**, choose one of:
+   **If not configured**:
 
-   **Option A — Interactive wizard** (run this yourself in terminal; preserves existing profiles):
    ```bash
-   okx config init          # demo mode (opens browser → OKX demo API page)
+   okx config init          # interactive wizard — demo mode (opens browser → OKX demo API page)
    okx config init          # run again for live mode (creates a second profile)
    ```
    Creates `okx-demo` (demo) and/or `okx-prod` (live) profiles. Each run safely merges into the existing config file without overwriting other profiles.
 
-   **Option B — Write config directly** (use when no config file exists yet; agent can do this if user provides credentials in chat):
+   Or set environment variables:
    ```bash
-   # Demo only
-   mkdir -p ~/.okx && cat > ~/.okx/config.toml << 'EOF'
-   default_profile = "okx-demo"
-
-   [profiles.okx-demo]
-   api_key = "YOUR_API_KEY"
-   secret_key = "YOUR_SECRET_KEY"
-   passphrase = "YOUR_PASSPHRASE"
-   demo = true
-   EOF
-
-   # Demo + live (both profiles)
-   mkdir -p ~/.okx && cat > ~/.okx/config.toml << 'EOF'
-   default_profile = "okx-demo"
-
-   [profiles.okx-demo]
-   api_key = "DEMO_API_KEY"
-   secret_key = "DEMO_SECRET_KEY"
-   passphrase = "DEMO_PASSPHRASE"
-   demo = true
-
-   [profiles.okx-prod]
-   api_key = "PROD_API_KEY"
-   secret_key = "PROD_SECRET_KEY"
-   passphrase = "PROD_PASSPHRASE"
-   demo = false
-   EOF
+   export OKX_API_KEY=your_key
+   export OKX_SECRET_KEY=your_secret
+   export OKX_PASSPHRASE=your_passphrase
    ```
-   > ⚠ If `~/.okx/config.toml` already exists with other profiles, use Option A (`okx config init`) instead to avoid overwriting them.
 
-   **After writing config**: CLI commands pick up the new credentials immediately. MCP tools require a reconnect (restart Claude Desktop or the MCP server process) to reload the config.
+   > **Security**: NEVER accept API credentials directly in chat. If the user pastes credentials, warn them and ask them to run `okx config init` or edit `~/.okx/config.toml` manually with their local editor instead. Credentials must never appear in conversation history.
 
    **Switch between profiles**:
    ```bash

@@ -120,6 +120,127 @@ Agent replies: "Order placed: 7890123456 (OK) — simulated, no real funds used.
 - For regular spot/swap/futures/options/algo orders → use `okx-cex-trade` (this skill)
 - For grid and DCA trading bots → use `okx-cex-bot`
 
+## Sz Conversion Rules for Derivatives
+
+**Applies to all swap, futures, and option orders. `--sz` always means number of contracts, never a currency amount. Follow this flow before every derivative place order.**
+
+### Step 1 — Identify contract type from instId
+
+| instId pattern | Contract type | Settlement | ctVal unit |
+|---|---|---|---|
+| `*-USDT-SWAP` | Linear perpetual swap | USDT | Base currency (BTC/ETH/…) |
+| `*-USDT-YYMMDD` | Linear delivery futures | USDT | Base currency |
+| `*-USD-SWAP` | Inverse perpetual swap | Base coin | USD (fixed, e.g. 100 USD) |
+| `*-USD-YYMMDD` | Inverse delivery futures | Base coin | USD (fixed, e.g. 100 USD) |
+| `*-USD-YYMMDD-strike-C/P` | Inverse option | Base coin | Base currency (e.g. 0.1 BTC) |
+
+### Step 2 — Determine user's sz intent
+
+```
+User mentions a quantity:
+
+1. Includes currency unit (USDT / USD / $ / ¥ / 元)
+   → User is specifying a quote-currency amount → must convert to contracts (see Step 3)
+
+2. Explicitly says "X contracts" / "X 张" / "X 手"
+   → Use directly as sz, no conversion needed
+
+3. Plain number with no unit (for swap/futures/option orders)
+   → Ambiguous — ask before proceeding:
+     "您输入的 X 是合约张数还是 USDT 金额？"
+     (Is X the number of contracts or a USDT amount?)
+     Wait for the user's answer before continuing.
+```
+
+### Step 3 — Apply the correct conversion formula
+
+Before running any formula, fetch the required data:
+
+```bash
+# Get ctVal, minSz, lotSz for the instrument
+okx market instruments --instType <SWAP|FUTURES|OPTION> --instId <instId> --json
+
+# Get current mark price (for linear contracts and options)
+okx market mark-price --instType <SWAP|FUTURES|OPTION> --instId <instId> --json
+```
+
+#### A. Linear contracts (`*-USDT-SWAP` / `*-USDT-YYMMDD`)
+
+```
+ctVal unit: base currency (e.g. ETH)
+markPx unit: USDT
+
+Formula:  sz = floor(usdtAmt / (markPx × ctVal))
+
+Example — ETH-USDT-SWAP (ctVal=0.1 ETH, markPx=2000 USDT):
+  200 USDT → floor(200 / (2000 × 0.1)) = floor(1.0) = 1 contract  ✓
+   50 USDT → floor(50  / (2000 × 0.1)) = floor(0.25) = 0          ✗ insufficient
+```
+
+#### B. Inverse contracts (`*-USD-SWAP` / `*-USD-YYMMDD`)
+
+```
+ctVal unit: USD (fixed face value, e.g. 100 USD per contract)
+markPx is NOT needed for sz calculation
+
+Formula:  sz = floor(usdtAmt / ctVal)   (1 USDT ≈ 1 USD)
+
+Example — BTC-USD-SWAP (ctVal=100 USD):
+  500 USDT → floor(500 / 100) = 5 contracts  ✓
+
+⚠ Settlement warning (always show):
+  "This is an inverse contract. Margin and P&L are settled in BTC, not USDT.
+   Your USDT must be converted to BTC to meet margin requirements."
+```
+
+#### C. Inverse options (`*-USD-YYMMDD-strike-C/P`)
+
+```
+markPx unit: base currency (e.g. BTC per contract)
+ctVal unit: base currency (e.g. 0.1 BTC)
+Need BTC spot price to convert USDT → contracts
+
+Required data:
+  okx option greeks --uly <BTC-USD> --expTime <YYMMDD> --json  → markPx (BTC)
+  okx market ticker BTC-USDT --json                            → last price (btcPx)
+
+Formula (buyer cost):
+  sz = floor(usdtAmt / (markPx_BTC × btcPx × ctVal))
+
+Example — BTC-USD-250328-95000-C (markPx=0.005 BTC, btcPx=95000, ctVal=0.1 BTC):
+  200 USDT → floor(200 / (0.005 × 95000 × 0.1))
+           = floor(200 / 47.5) = floor(4.21) = 4 contracts
+  Total premium ≈ 4 × 0.005 × 0.1 = 0.002 BTC ≈ 190 USDT
+
+⚠ Always show both BTC and USDT premium cost to the buyer.
+⚠ Seller margin is also in BTC — remind user of liquidation risk.
+```
+
+### Step 4 — Validate and confirm before placing
+
+```
+After computing sz:
+
+1. sz == 0 or sz < minSz
+   → Reject. Inform user:
+     "Amount too small: minimum order is {minSz} contract(s),
+      equivalent to ~{minSz × markPx × ctVal} USDT."
+
+2. sz not a multiple of lotSz
+   → Round down to the nearest valid multiple:
+     sz = floor(sz / lotSz) × lotSz
+
+3. sz ≥ minSz
+   → Show conversion summary and wait for user confirmation before placing:
+
+     Conversion summary:
+       Input:    {usdtAmt} USDT
+       markPx:   {markPx}  |  ctVal: {ctVal}
+       Raw:      {usdtAmt} / ({markPx} × {ctVal}) = {rawResult}
+       Rounded:  {sz} contracts  (~{sz × markPx × ctVal} USDT actual value)
+     Confirm order with sz={sz}?
+```
+
 ## Quickstart
 
 ```bash
@@ -279,6 +400,47 @@ okx spot cancel --instId BTC-USDT --ordId <ordId>
 4. okx-cex-trade     okx swap algo orders --instId BTC-USDT-SWAP → confirm trail order placed
 ```
 
+### Open linear swap by USDT amount
+> User: "用 200 USDT 做多 ETH 永续 (cross margin)"
+
+```
+1. okx-cex-market  okx market instruments --instType SWAP --instId ETH-USDT-SWAP --json
+                   → ctVal=0.1 ETH, minSz=1, lotSz=1
+
+2. okx-cex-market  okx market mark-price --instType SWAP --instId ETH-USDT-SWAP --json
+                   → markPx=2000 USDT
+
+3. Agent computes:  sz = floor(200 / (2000 × 0.1)) = 1 contract (~200 USDT)
+   Agent informs user of conversion summary and asks to confirm
+
+        ↓ user confirms
+
+4. okx-cex-trade   okx swap place --instId ETH-USDT-SWAP --side buy --ordType market \
+                     --sz 1 --tdMode cross --profile <live|demo>
+
+5. okx-cex-trade   okx swap positions ETH-USDT-SWAP    → confirm position opened
+```
+
+### Open inverse swap by USDT amount
+> User: "用 500 USDT 开一个 BTC 币本位永续多单"
+
+```
+1. okx-cex-market  okx market instruments --instType SWAP --instId BTC-USD-SWAP --json
+                   → ctVal=100 USD, minSz=1
+
+2. Agent computes:  sz = floor(500 / 100) = 5 contracts
+   Agent warns:    "BTC-USD-SWAP 是币本位合约，保证金和盈亏以 BTC 结算，非 USDT。
+                    请确认账户有足够 BTC 作为保证金。"
+   Agent shows conversion summary and asks to confirm
+
+        ↓ user confirms
+
+3. okx-cex-trade   okx swap place --instId BTC-USD-SWAP --side buy --ordType market \
+                     --sz 5 --tdMode cross --profile <live|demo>
+
+4. okx-cex-trade   okx swap positions BTC-USD-SWAP    → confirm position opened
+```
+
 ### Cancel all open spot orders
 > User: "Cancel all my open BTC spot orders"
 
@@ -369,7 +531,7 @@ Before any authenticated command:
 1. **Profile** — determined in Step 0; use `--profile live` (实盘) or `--profile demo` (模拟盘)
 2. **Confirm parameters** — confirm the key order details once before executing:
    - Spot place: confirm `--instId`, `--side`, `--ordType`, `--sz`; price (`--px`) required for limit orders; optionally attach TP/SL with `--tpTriggerPx`/`--slTriggerPx`
-   - Swap place: confirm `--instId`, `--side`, `--sz`, `--tdMode`; confirm `--posSide` if in hedge mode; optionally attach TP/SL with `--tpTriggerPx`/`--slTriggerPx`
+   - Swap/Futures/Option place: **before confirming `--sz`, apply "Sz Conversion Rules for Derivatives"** — if the user's input was a USDT amount, resolve it to contracts first, show the conversion summary, and use the computed `sz` in the confirmation; confirm `--instId`, `--side`, `--sz`, `--tdMode`; confirm `--posSide` if in hedge mode; optionally attach TP/SL with `--tpTriggerPx`/`--slTriggerPx`
    - Swap close: confirm `--instId`, `--mgnMode`, `--posSide`; closes the entire position at market
    - Swap leverage: confirm new leverage and impact on existing positions; cannot exceed exchange max
    - Algo place (TP/SL): confirm trigger prices; use `--tpOrdPx -1` for market execution at trigger
@@ -1066,6 +1228,8 @@ okx option positions
 - **Fills vs orders**: `fills` shows executed trades; `orders --history` shows all orders including cancelled
 
 ### Swap / Perpetual
+- **sz unit**: always number of contracts — never pass a USDT amount directly. If the user gives a USDT amount, apply "Sz Conversion Rules for Derivatives" before placing
+- **Linear vs inverse**: `BTC-USDT-SWAP` is linear (USDT-margined); `BTC-USD-SWAP` is inverse (BTC-margined). For inverse, warn the user that margin and P&L are settled in BTC
 - **posSide**: required in hedge mode (`long_short_mode`); omit in net mode. Check `okx account config` for `posMode`
 - **tdMode**: use `cross` for cross-margin, `isolated` for isolated margin
 - **Close position**: `swap close` closes the **entire** position; to partial close, use `swap place` with a reduce-only algo
@@ -1074,14 +1238,17 @@ okx option positions
 - **Algo on close side**: always set `--side` opposite to position (e.g., long position → sell algo)
 
 ### Futures / Delivery
+- **sz unit**: always number of contracts — apply "Sz Conversion Rules for Derivatives" when user gives a USDT amount
+- **Linear vs inverse**: `BTC-USDT-250328` is linear; `BTC-USD-250328` is inverse (USD face value, BTC settlement). For inverse, `sz = floor(usdtAmt / ctVal)` where ctVal is typically 100 USD
 - **instId format**: delivery futures use date suffix: `BTC-USDT-250328` for March 28, 2025 expiry
 - **Expiry**: futures expire on the delivery date — all positions auto-settle; do not hold through expiry unless intended
 - **No swap-specific features**: futures don't have trailing stops or `swap close` — use `futures cancel` + `futures place` for adjustments
 
 ### Options
+- **sz unit**: always number of contracts — apply "Sz Conversion Rules for Derivatives" when user gives a USDT amount. For inverse options (BTC-USD), premium is quoted in BTC; convert via `sz = floor(usdtAmt / (markPx_BTC × btcPx × ctVal))`
 - **instId format**: `{uly}-{YYMMDD}-{strike}-{C|P}` — e.g. `BTC-USD-250328-95000-C`; always run `okx option instruments --uly BTC-USD` first to confirm the exact contract exists
 - **tdMode**: buyers always use `cash` (full premium paid upfront, no liquidation); sellers use `cross` or `isolated` (margin required, liquidation risk)
-- **sz unit**: number of contracts (1 BTC option contract = 0.1 BTC on OKX); `--px` is quoted in BTC (e.g. `0.005` = 0.005 BTC premium per contract)
+- **px unit**: quoted in base currency for inverse options (e.g. `0.005` = 0.005 BTC premium per contract); always show equivalent USDT value to the user
 - **Expiry**: options expire at 08:00 UTC on the expiry date; in-the-money options are auto-exercised; do not hold through expiry unless intended
 - **No TP/SL algo on options**: the `swap algo` / `spot algo` commands do not apply to option positions; manage risk by cancelling/amending option orders directly
 - **Greeks in positions**: `okx option positions` returns live portfolio Greeks (`deltaPA`, `gammaPA`, etc.) from the account's position-level calculation, while `okx option greeks` returns BS model Greeks per contract
@@ -1095,4 +1262,4 @@ okx option positions
 - Rate limit: 60 order operations per 2 seconds per UID
 - Batch operations (batch cancel, batch amend) are available via MCP tools directly if needed
 - Position mode (`net` vs `long_short_mode`) affects whether `--posSide` is required
-- Spot `--sz` is base currency; swap/futures `--sz` is number of contracts
+- Spot `--sz` is base currency amount; swap/futures/options `--sz` is always **number of contracts** — never a USDT amount. When the user specifies a USDT (or other currency) amount for derivatives, always run the sz conversion flow in "Sz Conversion Rules for Derivatives" and confirm the calculated contract count with the user before placing

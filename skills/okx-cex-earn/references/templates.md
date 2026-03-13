@@ -12,8 +12,8 @@ Found the following {CALL/PUT} Dual Investment products:
 
 | # | Product | Target Price | vs Spot | Ref APR | Term | Expiry | Min. Size |
 |---|---------|-------------|---------|---------|------|--------|-----------|
-| 1 | BTC-USDT-260319-72000-CALL | $72,000 | ↑3.63% | 26.4% | 7d | Mar 19 | 0.001 BTC |
-| 2 | BTC-USDT-260319-73000-CALL | $73,000 | ↑5.08% | 8.3% | 7d | Mar 19 | 0.001 BTC |
+| 1 | BTC-USDT-260319-72000-C | $72,000 | ↑3.63% | 26.4% | 7d | Mar 19 | 0.001 BTC |
+| 2 | BTC-USDT-260319-73000-C | $73,000 | ↑5.08% | 8.3% | 7d | Mar 19 | 0.001 BTC |
 
 Notes:
 - Target price closer to spot → higher trigger probability, higher ref APR

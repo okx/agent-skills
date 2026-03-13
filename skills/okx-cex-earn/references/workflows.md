@@ -7,7 +7,7 @@
 1. `okx --profile live account asset-balance <ccy>` → idle funds in funding account
 2. `okx --profile live account balance <ccy>` → idle funds in trading account
 3. `okx --profile live earn savings balance <ccy>` → already in earn
-4. `okx earn savings rate-history --ccy <ccy> --limit 1 --json` → current `rate` (threshold) and `lendingRate` (actual yield)
+4. `okx --profile live earn savings rate-history --ccy <ccy> --limit 1 --json` → current `rate` (threshold) and `lendingRate` (actual yield)
 → summarize idle funds and suggest subscribing if lendingRate is acceptable
 
 ---
@@ -18,12 +18,12 @@
 
 1. Run in parallel:
    - `okx --profile live account asset-balance USDT` → verify balance ≥ 1000
-   - `okx earn savings rate-history --ccy USDT --limit 1 --json` → current APY
+   - `okx --profile live earn savings rate-history --ccy USDT --limit 1 --json` → current APY
 2. Show confirmation summary (see savings-commands.md), wait for user confirmation
 3. `okx --profile live earn savings purchase --ccy USDT --amt 1000`
 4. Run in parallel to verify:
    - `okx --profile live earn savings balance USDT --json` → confirm position updated
-   - `okx earn savings rate-history --ccy USDT --limit 1 --json` → show current lendingRate in position summary
+   - `okx --profile live earn savings rate-history --ccy USDT --limit 1 --json` → show current lendingRate in position summary
 
 ---
 
@@ -33,7 +33,10 @@
 
 1. `okx --profile live earn savings balance USDT` → check redeemable amount; show summary, wait for confirmation
 2. `okx --profile live earn savings redeem --ccy USDT --amt <amt>`
-3. `okx --profile live account transfer --ccy USDT --amt <amt> --from 18 --to 6` (CLI account type IDs: 18=funding, 6=trading; run `okx account types` to confirm if needed)
+3. _(Optional — requires **Withdraw** permission on the API key)_
+   `okx --profile live account transfer --ccy USDT --amt <amt> --from 18 --to 6` (CLI account type IDs: 18=funding, 6=trading)
+
+   If step 3 fails with a permission error, inform the user that their API key does not have Withdraw permission and they should complete the transfer manually in the OKX app.
 
 ---
 
@@ -55,9 +58,9 @@
 When user does **not** specify a currency pair, run in parallel:
 
 ```bash
-okx earn dcd pairs                                              # supported pairs
-okx market ticker BTC-USDT                                     # spot price
-okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType <C|P>  # default BTC-USDT
+okx --profile live earn dcd pairs                                              # supported pairs
+okx --profile live market ticker BTC-USDT                                     # spot price
+okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType <C|P>  # default BTC-USDT
 ```
 
 - Show BTC-USDT as default result
@@ -106,7 +109,7 @@ Cross-skill: `okx-cex-market` for spot price, `okx-cex-portfolio` for balance if
    - Execute `earn dcd quote-and-buy` immediately, no extra confirmation step.
 
    **Path B — Preview quote first:**
-   1. `earn dcd quote --productId ... --notionalSz ... --notionalCcy ...`
+   1. `earn dcd quote --productId ... --sz ... --notionalCcy ...`
    2. Show `annualizedYield`, `absYield`, `idxPx`, `validUntil` (quote expires in 30s)
    3. Explicitly warn the user the quote expires at `{validUntil}` and execution will be immediate upon confirmation.
    4. User confirms → `earn dcd buy --quoteId <quoteId>`
@@ -143,7 +146,7 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 
 "我想在72000卖出BTC"
 
-1. `okx-cex-market` `okx market ticker BTC-USDT`
-2. `okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000`
+1. `okx-cex-market` `okx --profile live market ticker BTC-USDT`
+2. `okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000`
    → explain CALL mechanics, show table, guide user to select term
-3. `okx --profile live earn dcd quote-and-buy --productId <id> --notionalSz <sz> --notionalCcy BTC`
+3. `okx --profile live earn dcd quote-and-buy --productId <id> --sz <sz> --notionalCcy BTC`

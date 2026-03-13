@@ -70,6 +70,9 @@ okx market open-interest --instType SWAP
 
 # List all active SPOT instruments
 okx market instruments --instType SPOT
+
+# List all tradeable stock token perpetuals (TSLA, NVDA, AAPL, etc.)
+okx market stock-tokens
 ```
 
 ## Command Index
@@ -88,6 +91,7 @@ okx market instruments --instType SPOT
 | 10 | `okx market index-ticker [--instId <id>] [--quoteCcy <ccy>]` | READ | Index price (e.g., BTC-USD) |
 | 11 | `okx market price-limit <instId>` | READ | Upper/lower price limits for contracts |
 | 12 | `okx market open-interest --instType <type> [--instId <id>]` | READ | Open interest in contracts and coins |
+| 13 | `okx market stock-tokens` | READ | List all tradeable stock token perpetuals (TSLA, NVDA, AAPL, etc.) |
 
 ## Cross-Skill Workflows
 
@@ -131,6 +135,20 @@ okx market instruments --instType SPOT
 2. okx-cex-market    okx market ticker BTC-USDT-SWAP         → perp last price
 3. okx-cex-market    okx market mark-price --instType SWAP --instId BTC-USDT-SWAP  → mark price
 ```
+
+### Discover stock tokens before trading
+> User: "I want to trade TSLA or NVDA — what's available?"
+
+```
+1. okx-cex-market   okx market stock-tokens              → list all stock token instIds and specs
+        ↓ pick instId (e.g., TSLA-USDT-SWAP)
+2. okx-cex-market   okx market ticker TSLA-USDT-SWAP     → current price and 24h range
+3. okx-cex-market   okx market instruments --instType SWAP --instId TSLA-USDT-SWAP --json
+                    → get ctVal, minSz, lotSz for sz conversion
+        ↓ ready to trade — see okx-cex-trade (max leverage: 5x)
+```
+
+---
 
 ### Discover and price an option
 > User: "What's the price of a BTC call option expiring this week?"
@@ -324,6 +342,18 @@ Returns: `oi` (contracts), `oiCcy` (base currency amount), `ts`.
 
 ---
 
+### Stock Tokens — List All Stock Token Perpetuals
+
+```bash
+okx market stock-tokens [--json]
+```
+
+Returns: `instId`, `ctVal`, `lotSz`, `minSz`, `tickSz`, `state` for all active stock token SWAP instruments (`instCategory=3`, e.g., `TSLA-USDT-SWAP`, `NVDA-USDT-SWAP`).
+
+> **Fallback** (if command not yet available): `okx market instruments --instType SWAP --json | jq '[.[] | select(.instCategory == "3")]'` — requires `jq` installed.
+
+---
+
 ## MCP Tool Reference
 
 | Tool | Description |
@@ -398,9 +428,22 @@ okx market instruments --instType SPOT
 # → table: instId, ctVal, lotSz, minSz, tickSz, state (up to 50 rows)
 ```
 
+**"What stock tokens can I trade?"**
+```bash
+okx market stock-tokens
+# → table: instId (TSLA-USDT-SWAP, NVDA-USDT-SWAP, AAPL-USDT-SWAP, ...), ctVal, minSz, tickSz, state
+```
+
+**"What's the TSLA price?"**
+```bash
+okx market ticker TSLA-USDT-SWAP
+# → instId: TSLA-USDT-SWAP | last: 310.5 | 24h change %: +2.1% | 24h high: 315 | 24h low: 302
+```
+
 ## Edge Cases
 
-- **instId format**: SPOT uses `BTC-USDT`; SWAP uses `BTC-USDT-SWAP`; FUTURES uses `BTC-USDT-250328`; OPTION uses `BTC-USD-250328-95000-C`; Index uses `BTC-USD`
+- **instId format**: SPOT uses `BTC-USDT`; SWAP uses `BTC-USDT-SWAP`; FUTURES uses `BTC-USDT-250328`; OPTION uses `BTC-USD-250328-95000-C`; Index uses `BTC-USD`; Stock token SWAP uses `TSLA-USDT-SWAP` (identified by `instCategory=3`)
+- **Stock token trading hours**: stock tokens follow underlying exchange hours (US stocks: Mon–Fri ~09:30–16:00 ET). Orders outside trading hours may be queued or rejected — confirm a live last price with `okx market ticker` before trading
 - **OPTION instruments — cannot list directly**: `okx market instruments --instType OPTION` requires `--uly BTC-USD` (underlying). If the underlying is unknown, run `okx market open-interest --instType OPTION` first to discover active option instIds from the results, then use those instIds with `okx market ticker <instId>`
 - **No data returned**: instrument may be delisted or instId is wrong — verify with `okx market instruments`
 - **funding-rate**: only applies to SWAP instruments; returns error for SPOT/FUTURES

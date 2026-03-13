@@ -55,9 +55,27 @@ okx --profile live earn onchain redeem --ordId 12345 --protocolType staking --al
 |---|---|---|
 | `--ordId` | Yes | Order ID |
 | `--protocolType` | Yes | `staking` or `defi` |
-| `--allowEarlyRedeem` | No | Allow early redemption (may incur penalty) |
+| `--allowEarlyRedeem` | No | Force early exit from a fixed-term product before maturity (may incur penalty) |
 
-Show `estSettlementTime` as estimated arrival time. If early redemption, explicitly state any penalty. Wait for confirmation.
+### `earlyRedeem` field semantics
+
+`earlyRedeem` is a field on the **order or product**, not the redeem command itself:
+
+| Value | Meaning |
+|---|---|
+| `false` | No forced-early-exit option available. For **flexible products** (`term: 0`) this is irrelevant — normal redemption is always supported. For **fixed-term products** (`term > 0`) this means the lock cannot be broken early. |
+| `true` | Fixed-term product supports forced early exit via `--allowEarlyRedeem`, but a penalty applies. |
+
+**Do NOT show an "early redemption not supported" warning** unless:
+- The product is **fixed-term** (`term > 0`), AND
+- The user explicitly wants to exit **before maturity**
+
+For **flexible/open-ended products** (`term: 0`), normal redemption is always available — do not mention `earlyRedeem` at all.
+
+**Pre-redeem confirmation** — include in the summary:
+- `estSettlementTime` → estimated arrival time
+- If `--allowEarlyRedeem` is used on a fixed-term product: explicitly state the penalty applies
+- For flexible products: no penalty note needed
 
 > `cancelRedemptionDeadline` is returned by the API but cancelling a redemption is not supported — do not show this field.
 

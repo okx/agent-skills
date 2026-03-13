@@ -29,7 +29,7 @@ okx --profile live earn savings purchase --ccy USDT --amt 1000 --rate 0.02
 
 **Pre-execution checklist:**
 1. Check balance: `okx --profile live account asset-balance <ccy>` — verify user has sufficient funds; if insufficient, inform user and stop
-2. Fetch rates (in parallel with step 1): `earn savings rate-history --ccy <ccy> --limit 1 --json`
+2. Fetch rates (in parallel with step 1): `okx --profile live earn savings rate-history --ccy <ccy> --limit 1 --json`
 3. Show confirmation summary (see [Confirmation Templates](#confirmation-templates))
 4. Wait for user confirmation — if user declines, acknowledge and offer to adjust the amount or currency
 
@@ -77,11 +77,11 @@ Output fields: `ccy` · `amt` · `earnings` · `rate` · `ts`
 
 ## earn savings rate-summary
 
-Public endpoint — no credentials required.
+Requires `--profile live`.
 
 ```bash
-okx earn savings rate-summary          # all currencies
-okx earn savings rate-summary USDT
+okx --profile live earn savings rate-summary          # all currencies
+okx --profile live earn savings rate-summary USDT
 ```
 
 Output fields: `ccy` · `avgRate` (historical average) · `estRate` (estimated) · `avgAmt`
@@ -92,11 +92,11 @@ Output fields: `ccy` · `avgRate` (historical average) · `estRate` (estimated) 
 
 ## earn savings rate-history
 
-Public endpoint — no credentials required.
+Requires `--profile live`.
 
 ```bash
-okx earn savings rate-history --ccy USDT --limit 1 --json   # current real APY
-okx earn savings rate-history --ccy USDT --limit 30         # recent trend
+okx --profile live earn savings rate-history --ccy USDT --limit 1 --json   # current real APY
+okx --profile live earn savings rate-history --ccy USDT --limit 30         # recent trend
 ```
 
 | Parameter | Required | Description |

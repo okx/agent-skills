@@ -33,18 +33,19 @@ Average index price between 15:00–16:00 (UTC+8) on the expiry date — not rea
 ## earn dcd pairs
 
 ```bash
-okx earn dcd pairs
+okx --profile live earn dcd pairs
 ```
 
 Output fields: `baseCcy` · `quoteCcy` · `optType`
+> The API may return duplicate entries for the same (baseCcy, quoteCcy, optType) combination. Deduplicate client-side before displaying.
 
 ---
 
 ## earn dcd products
 
 ```bash
-okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C
-okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000 --minYield 0.05 --maxTermDays 7
+okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C
+okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000 --minYield 0.05 --maxTermDays 7
 ```
 
 | Parameter | Required | Description |
@@ -90,16 +91,34 @@ okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 720
 
 ---
 
-## earn dcd quote-and-buy
+## earn dcd quote
+
+Request a real-time quote (TTL 30s). Use `earn dcd buy --quoteId <id>` to execute, or prefer `quote-and-buy` to do both in one step.
 
 ```bash
-okx --profile live earn dcd quote-and-buy --productId BTC-USDT-260327-72000-CALL --notionalSz 100 --notionalCcy USDT
+okx --profile live earn dcd quote --productId BTC-USDT-260327-72000-C --sz 100 --notionalCcy USDT
 ```
 
 | Parameter | Required | Description |
 |---|---|---|
 | `--productId` | Yes | From `earn dcd products` |
-| `--notionalSz` | Yes | Notional size |
+| `--sz` | Yes | Notional size |
+| `--notionalCcy` | Yes | baseCcy or quoteCcy of the product |
+
+Output fields: `quoteId` · `annualizedYield` · `absYield` · `notionalSz` · `notionalCcy` · `idxPx` · `validUntil`
+
+---
+
+## earn dcd quote-and-buy
+
+```bash
+okx --profile live earn dcd quote-and-buy --productId BTC-USDT-260327-72000-C --sz 100 --notionalCcy USDT
+```
+
+| Parameter | Required | Description |
+|---|---|---|
+| `--productId` | Yes | From `earn dcd products` |
+| `--sz` | Yes | Notional size |
 | `--notionalCcy` | Yes | baseCcy or quoteCcy of the product |
 | `--clOrdId` | No | Client order ID for idempotency |
 
@@ -133,9 +152,8 @@ okx --profile live earn dcd orders --ordId <id> --json
 | Parameter | Required | Description |
 |---|---|---|
 | `--ordId` | No | Specific order (ignores other filters) |
+| `--state` | No | Filter by order state (see State translation table below) |
 | `--limit` | No | Max results (default 100) |
-
-> **Do NOT use `--state` parameter** — the API may reject it (HTTP 400). Query all orders and filter client-side.
 
 **Always use `--json` flag** — render JSON as Markdown table, never paste raw CLI output.
 

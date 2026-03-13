@@ -7,7 +7,7 @@ Use this checklist before approving a skill MR. It is organized by priority so r
 ## 1. Structure (High Priority)
 
 - [ ] **Frontmatter has `---` delimiters** — YAML metadata must be wrapped in `---` markers for the skill engine to parse `name`, `description`, and other fields correctly.
-- [ ] **`description` is concise (aim for 80–120 words)** — The description field is always-in-context and used for agent routing, not as a feature spec. Trigger phrases belong here; detailed routing tables go in the body.
+- [ ] **`description` is concise (aim for 80–150 words)** — The description field is always-in-context and used for agent routing, not as a feature spec. Trigger phrases belong here; detailed routing tables go in the body.
 - [ ] **File size is under 500 lines** — If the skill exceeds 500 lines, consider a layered architecture (guideline, not a hard gate):
   - `SKILL.md` (~300 lines): core workflow, always loaded
   - `references/cli-commands.md`: detailed CLI parameter tables

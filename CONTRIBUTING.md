@@ -60,6 +60,8 @@ A well-formed skill document includes:
 - [ ] No internal URLs, credentials, or personally identifiable information included
 - [ ] `license: MIT` is set in frontmatter
 
+Before approving a skill MR, reviewers should follow the [Skill Review Checklist](REVIEWING.md).
+
 ## Reporting issues
 
 Open a GitHub issue for:

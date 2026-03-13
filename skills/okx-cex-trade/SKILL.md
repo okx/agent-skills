@@ -265,6 +265,22 @@ okx swap close --instId BTC-USDT-SWAP --mgnMode cross --posSide long
 # Set 10x leverage on BTC perp (cross)
 okx swap leverage --instId BTC-USDT-SWAP --lever 10 --mgnMode cross
 
+# --- Stock Token (TSLA, NVDA, etc.) ---
+# Step 1: set leverage ≤ 5x (stock tokens max leverage is 5x)
+okx swap leverage --instId TSLA-USDT-SWAP --lever 5 --mgnMode cross
+
+# Step 2: open long on TSLA (--posSide required for stock tokens)
+okx swap place --instId TSLA-USDT-SWAP --side buy --ordType market --sz 1 \
+  --tdMode cross --posSide long
+
+# Open short on NVDA
+okx swap leverage --instId NVDA-USDT-SWAP --lever 3 --mgnMode cross
+okx swap place --instId NVDA-USDT-SWAP --side sell --ordType market --sz 1 \
+  --tdMode cross --posSide short
+
+# Close TSLA long entirely at market
+okx swap close --instId TSLA-USDT-SWAP --mgnMode cross --posSide long
+
 # Set TP/SL on a spot BTC position (sell when price hits $105k, SL at $88k)
 okx spot algo place --instId BTC-USDT --side sell --ordType oco --sz 0.01 \
   --tpTriggerPx 105000 --tpOrdPx -1 \
@@ -399,6 +415,32 @@ okx spot cancel --instId BTC-USDT --ordId <ordId>
                        --sz <pos_size> --tdMode cross --posSide long --callbackRatio 0.03
 4. okx-cex-trade     okx swap algo orders --instId BTC-USDT-SWAP → confirm trail order placed
 ```
+
+### Trade a stock token (TSLA / NVDA / AAPL)
+> User: "I want to long TSLA with 500 USDT"
+
+```
+1. okx-cex-market   okx market stock-tokens              → confirm TSLA-USDT-SWAP is available
+2. okx-cex-market   okx market ticker TSLA-USDT-SWAP     → current price (e.g., markPx=310 USDT)
+3. okx-cex-market   okx market instruments --instType SWAP --instId TSLA-USDT-SWAP --json
+                    → ctVal=1, minSz=1, lotSz=1
+   Agent computes:  sz = floor(500 / (310 × 1)) = 1 contract (~310 USDT)
+   Agent shows conversion summary and asks to confirm
+
+        ↓ user confirms
+
+4. okx-cex-portfolio okx account balance USDT            → confirm margin available
+5. okx-cex-trade    okx swap get-leverage --instId TSLA-USDT-SWAP --mgnMode cross
+                    → check current leverage; must be ≤ 5x
+   (if not set or > 5x) okx swap leverage --instId TSLA-USDT-SWAP --lever 5 --mgnMode cross
+6. okx-cex-trade    okx swap place --instId TSLA-USDT-SWAP --side buy --ordType market \
+                      --sz 1 --tdMode cross --posSide long
+7. okx-cex-trade    okx swap positions TSLA-USDT-SWAP    → confirm position opened
+```
+
+> ⚠ **Stock token constraints**: max leverage **5x** (exchange rejects > 5x). `--posSide` is required. Trading follows stock market hours — confirm live ticker before placing.
+
+---
 
 ### Open linear swap by USDT amount
 > User: "用 200 USDT 做多 ETH 永续 (cross margin)"
@@ -761,6 +803,8 @@ okx swap leverage --instId <id> --lever <n> --mgnMode <cross|isolated> \
 | `--lever` | Yes | - | Leverage multiplier (e.g., `10`) |
 | `--mgnMode` | Yes | - | `cross` or `isolated` |
 | `--posSide` | Cond. | - | `long` or `short` — required for isolated mode in hedge mode |
+
+> ⚠ **Stock tokens** (e.g., `TSLA-USDT-SWAP`): maximum leverage is **5x**. The exchange will reject `--lever` values above 5 for stock token instruments.
 
 ---
 
@@ -1174,6 +1218,20 @@ okx swap leverage --instId BTC-USDT-SWAP --lever 5 --mgnMode cross
 # → Leverage set: 5x BTC-USDT-SWAP
 ```
 
+**"Long 1 contract TSLA stock token at market (cross margin)"**
+```bash
+okx swap place --instId TSLA-USDT-SWAP --side buy --ordType market --sz 1 \
+  --tdMode cross --posSide long
+# → Order placed: 7890123461 (OK) [profile: live]
+```
+
+**"Open short on NVDA, 2 contracts"**
+```bash
+okx swap place --instId NVDA-USDT-SWAP --side sell --ordType market --sz 2 \
+  --tdMode cross --posSide short
+# → Order placed: 7890123462 (OK) [profile: live]
+```
+
 **"Place a 2% trailing stop on my BTC perp long"**
 ```bash
 okx swap algo trail --instId BTC-USDT-SWAP --side sell --sz 10 \
@@ -1236,6 +1294,7 @@ okx option positions
 - **Leverage**: max leverage varies by instrument and account level; exchange rejects if exceeded
 - **Trailing stop**: use either `--callbackRatio` (relative, e.g., `0.02`) or `--callbackSpread` (absolute price), not both
 - **Algo on close side**: always set `--side` opposite to position (e.g., long position → sell algo)
+- **Stock tokens (instCategory=3)**: instruments like `TSLA-USDT-SWAP`, `NVDA-USDT-SWAP` follow the same linear SWAP flow (USDT-margined, sz in contracts). Key differences: (1) max leverage **5x** — check with `swap get-leverage` before placing, set with `swap leverage --lever <n≤5>`; (2) `--posSide` is always required; (3) trading restricted to stock market hours (US stocks: Mon–Fri ~09:30–16:00 ET) — confirm live ticker before placing. Use `okx market stock-tokens` to list available instruments
 
 ### Futures / Delivery
 - **sz unit**: always number of contracts — apply "Sz Conversion Rules for Derivatives" when user gives a USDT amount

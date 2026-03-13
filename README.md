@@ -1,6 +1,7 @@
-# agent-skills
+# agent-skills 
 
 A collection of AI agent skills for OKX exchange operations. Each skill is a self-contained Markdown file that tells an AI agent how to use the `okx` CLI to perform a specific category of tasks — market data queries, portfolio management, trading, and bot automation.
+
 
 ## Skills
 
@@ -12,6 +13,8 @@ A collection of AI agent skills for OKX exchange operations. Each skill is a sel
 | [`okx-cex-bot`](skills/okx-cex-bot/SKILL.md) | Automated strategies: spot/contract grid bots and DCA bots | Yes |
 
 ## Requirements
+
+
 
 - [`okx` CLI](https://www.npmjs.com/package/@okx_ai/okx-trade-cli) installed:
   ```bash

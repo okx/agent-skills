@@ -439,11 +439,11 @@ Swap/Perpetual example:
 Futures/Delivery example:
 ```
 1. okx-cex-trade     okx futures positions                  → confirm size of open long
-2. okx-cex-market    okx market ticker BTC-USDT-250328      → current price reference
+2. okx-cex-market    okx market ticker BTC-USDT-<YYMMDD>      → current price reference
         ↓ user approves
-3. okx-cex-trade     okx futures algo trail --instId BTC-USDT-250328 --side sell \
+3. okx-cex-trade     okx futures algo trail --instId BTC-USDT-<YYMMDD> --side sell \
                        --sz <pos_size> --tdMode cross --posSide long --callbackRatio 0.03
-4. okx-cex-trade     okx futures algo orders --instId BTC-USDT-250328 → confirm trail order placed
+4. okx-cex-trade     okx futures algo orders --instId BTC-USDT-<YYMMDD> → confirm trail order placed
 ```
 
 ### Trade a stock token (TSLA / NVDA / AAPL)
@@ -578,7 +578,7 @@ Before any authenticated command:
 - Trailing stop → `okx swap algo trail`
 - Query → `okx swap positions/orders/get/fills/get-leverage/algo orders`
 
-**Futures/Delivery** (instId format: `BTC-USDT-250328`):
+**Futures/Delivery** (instId format: `BTC-USDT-<YYMMDD>`):
 - Place/cancel order → `okx futures place/cancel`
 - TP/SL conditional → `okx futures algo place/amend/cancel`
 - Trailing stop → `okx futures algo trail`
@@ -992,7 +992,7 @@ okx futures place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 | `--slTriggerPx` | No | - | Attached stop-loss trigger price |
 | `--slOrdPx` | No | - | SL order price; use `-1` for market execution |
 
-`--instId` format: `BTC-USDT-250328` (delivery date suffix).
+`--instId` format: `BTC-USDT-<YYMMDD>` (delivery date suffix).
 
 ---
 
@@ -1252,7 +1252,7 @@ okx option fills [--instId <id>] [--ordId <id>] [--archive] [--json]
 | `swap_close_position` | Close swap position |
 | `swap_set_leverage` | Set swap leverage |
 | `swap_place_algo_order` | Place swap TP/SL algo |
-| `place_move_stop_order` | Place trailing stop (spot/swap/futures) |
+| `swap_place_move_stop_order` | Place trailing stop (swap/futures) |
 | `swap_amend_algo_order` | Amend swap algo |
 | `swap_cancel_algo_orders` | Cancel swap algo |
 | `swap_get_positions` | Swap positions |
@@ -1369,7 +1369,7 @@ okx spot algo trail --instId BTC-USDT --side sell --sz 0.01 --callbackRatio 0.03
 
 **"Place a 2% trailing stop on my BTC futures long"**
 ```bash
-okx futures algo trail --instId BTC-USDT-250328 --side sell --sz 5 \
+okx futures algo trail --instId BTC-USDT-<YYMMDD> --side sell --sz 5 \
   --tdMode cross --posSide long --callbackRatio 0.02
 # → Trailing stop placed: TRAIL789 (OK)
 ```
@@ -1419,7 +1419,7 @@ okx option positions
 - **Price not required**: `market` orders don't need `--px`; `limit` / `post_only` / `fok` / `ioc` do
 - **Algo oco**: provide both `tpTriggerPx` and `slTriggerPx`; price `-1` means market execution at trigger
 - **Fills vs orders**: `fills` shows executed trades; `orders --history` shows all orders including cancelled
-- **Trailing stop**: use either `--callbackRatio` or `--callbackSpread`, not both; no `--tdMode` or `--posSide` required
+- **Trailing stop**: use either `--callbackRatio` (relative, e.g., `0.02`) or `--callbackSpread` (absolute price), not both; `--tdMode` and `--posSide` are not required for spot
 - **Algo on close side**: always set `--side` opposite to position direction (e.g., long spot holding → `sell` algo, short spot → `buy` algo)
 
 ### Swap / Perpetual
@@ -1435,11 +1435,11 @@ okx option positions
 
 ### Futures / Delivery
 - **sz unit**: always number of contracts — apply "Sz Conversion Rules for Derivatives" when user gives a USDT amount
-- **Linear vs inverse**: `BTC-USDT-250328` is linear; `BTC-USD-250328` is inverse (USD face value, BTC settlement). For inverse, `sz = floor(usdtAmt / ctVal)` where ctVal is typically 100 USD
-- **instId format**: delivery futures use date suffix: `BTC-USDT-250328` for March 28, 2025 expiry
+- **Linear vs inverse**: `BTC-USDT-<YYMMDD>` is linear; `BTC-USD-<YYMMDD>` is inverse (USD face value, BTC settlement). For inverse, `sz = floor(usdtAmt / ctVal)` where ctVal is typically 100 USD
+- **instId format**: delivery futures use date suffix: `BTC-USDT-<YYMMDD>` (e.g., `BTC-USDT-260328` for March 28, 2026 expiry)
 - **Expiry**: futures expire on the delivery date — all positions auto-settle; do not hold through expiry unless intended
 - **No `swap close`**: futures don't have `swap close` — use `futures cancel` + `futures place` for position adjustments
-- **Trailing stop**: use either `--callbackRatio` or `--callbackSpread`, not both; same parameters as swap (requires `--tdMode` and `--posSide` in hedge mode)
+- **Trailing stop**: use either `--callbackRatio` (relative, e.g., `0.02`) or `--callbackSpread` (absolute price), not both; same parameters as swap — `--tdMode` and `--posSide` required in hedge mode
 - **Algo on close side**: always set `--side` opposite to position (e.g., long position → `sell` algo)
 
 ### Options

@@ -692,12 +692,14 @@ Must provide at least one of `--newSz` or `--newPx`.
 
 ---
 
-### Spot — Place Algo (TP/SL)
+### Spot — Place Algo (TP/SL / Trail)
 
 ```bash
-okx spot algo place --instId <id> --side <buy|sell> --ordType <oco|conditional> --sz <n> \
+okx spot algo place --instId <id> --side <buy|sell> \
+  --ordType <oco|conditional|move_order_stop> --sz <n> \
   [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
+  [--callbackRatio <r>] [--callbackSpread <s>] [--activePx <p>] \
   [--json]
 ```
 
@@ -707,8 +709,11 @@ okx spot algo place --instId <id> --side <buy|sell> --ordType <oco|conditional> 
 | `--tpOrdPx` | Cond. | - | TP order price; use `-1` for market execution |
 | `--slTriggerPx` | Cond. | - | Stop-loss trigger price |
 | `--slOrdPx` | Cond. | - | SL order price; use `-1` for market execution |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--activePx` | No | - | Price at which trailing stop becomes active |
 
-For `oco`: provide both TP and SL params. For `conditional`: provide only TP or only SL.
+For `oco`: provide both TP and SL params. For `conditional`: provide only TP or only SL. For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
 
 ---
 
@@ -885,18 +890,30 @@ Returns table: `instId`, `mgnMode`, `posSide`, `lever`.
 
 ---
 
-### Swap — Place Algo (TP/SL)
+### Swap — Place Algo (TP/SL / Trail)
 
 ```bash
-okx swap algo place --instId <id> --side <buy|sell> --ordType <oco|conditional> --sz <n> \
+okx swap algo place --instId <id> --side <buy|sell> \
+  --ordType <oco|conditional|move_order_stop> --sz <n> \
   --tdMode <cross|isolated> \
   [--posSide <long|short>] [--reduceOnly] \
   [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
+  [--callbackRatio <r>] [--callbackSpread <s>] [--activePx <p>] \
   [--json]
 ```
 
-`--reduceOnly`: close-only; will not open a new position if one doesn't exist.
+| Param | Required | Default | Description |
+|---|---|---|---|
+| `--tpTriggerPx` | Cond. | - | Take-profit trigger price |
+| `--tpOrdPx` | Cond. | - | TP order price; use `-1` for market execution |
+| `--slTriggerPx` | Cond. | - | Stop-loss trigger price |
+| `--slOrdPx` | Cond. | - | SL order price; use `-1` for market execution |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--activePx` | No | - | Price at which trailing stop becomes active |
+
+`--reduceOnly`: close-only; will not open a new position if one doesn't exist. For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
 
 ---
 
@@ -1108,18 +1125,32 @@ okx futures get --instId <id> [--ordId <id>] [--json]
 
 ---
 
-### Futures — Place Algo (TP/SL)
+### Futures — Place Algo (TP/SL / Trail)
 
 ```bash
-okx futures algo place --instId <id> --side <buy|sell> --ordType <oco|conditional> --sz <n> \
+okx futures algo place --instId <id> --side <buy|sell> \
+  --ordType <oco|conditional|move_order_stop> --sz <n> \
   --tdMode <cross|isolated> \
   [--posSide <long|short>] [--reduceOnly] \
   [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
+  [--callbackRatio <r>] [--callbackSpread <s>] [--activePx <p>] \
   [--json]
 ```
 
-`--reduceOnly`: close-only; will not open a new position if one doesn't exist.
+`--instId` format: `BTC-USDT-<YYMMDD>` (e.g., `BTC-USDT-250328`).
+
+| Param | Required | Default | Description |
+|---|---|---|---|
+| `--tpTriggerPx` | Cond. | - | Take-profit trigger price |
+| `--tpOrdPx` | Cond. | - | TP order price; use `-1` for market execution |
+| `--slTriggerPx` | Cond. | - | Stop-loss trigger price |
+| `--slOrdPx` | Cond. | - | SL order price; use `-1` for market execution |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--activePx` | No | - | Price at which trailing stop becomes active |
+
+`--reduceOnly`: close-only; will not open a new position if one doesn't exist. For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
 
 ---
 

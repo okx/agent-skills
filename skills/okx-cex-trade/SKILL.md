@@ -347,30 +347,34 @@ okx spot cancel --instId BTC-USDT --ordId <ordId>
 |---|---|---|---|
 | 27 | `okx futures place` | WRITE | Place delivery futures order |
 | 28 | `okx futures cancel` | WRITE | Cancel delivery futures order |
-| 29 | `okx futures algo place` | WRITE | Place futures TP/SL algo order |
-| 30 | `okx futures algo trail` | WRITE | Place futures trailing stop order |
-| 31 | `okx futures algo amend` | WRITE | Amend futures algo order |
-| 32 | `okx futures algo cancel` | WRITE | Cancel futures algo order |
-| 33 | `okx futures orders` | READ | List delivery futures orders |
-| 34 | `okx futures positions` | READ | Open delivery futures positions |
-| 35 | `okx futures fills` | READ | Delivery futures fill history |
-| 36 | `okx futures get` | READ | Single delivery futures order details |
-| 37 | `okx futures algo orders` | READ | List futures algo orders |
+| 29 | `okx futures amend` | WRITE | Amend delivery futures order price or size |
+| 30 | `okx futures close` | WRITE | Close entire futures position at market |
+| 31 | `okx futures leverage` | WRITE | Set leverage for a futures instrument |
+| 32 | `okx futures algo place` | WRITE | Place futures TP/SL algo order |
+| 33 | `okx futures algo trail` | WRITE | Place futures trailing stop order |
+| 34 | `okx futures algo amend` | WRITE | Amend futures algo order |
+| 35 | `okx futures algo cancel` | WRITE | Cancel futures algo order |
+| 36 | `okx futures orders` | READ | List delivery futures orders |
+| 37 | `okx futures positions` | READ | Open delivery futures positions |
+| 38 | `okx futures fills` | READ | Delivery futures fill history |
+| 39 | `okx futures get` | READ | Single delivery futures order details |
+| 40 | `okx futures get-leverage` | READ | Current futures leverage settings |
+| 41 | `okx futures algo orders` | READ | List futures algo orders |
 
 ### Options Orders
 
 | # | Command | Type | Description |
 |---|---|---|---|
-| 38 | `okx option instruments` | READ | Option chain: list available contracts for an underlying |
-| 39 | `okx option greeks` | READ | Implied volatility + Greeks (delta/gamma/theta/vega) by underlying |
-| 40 | `okx option place` | WRITE | Place option order (call or put, buyer or seller) |
-| 41 | `okx option cancel` | WRITE | Cancel unfilled option order |
-| 42 | `okx option amend` | WRITE | Amend option order price or size |
-| 43 | `okx option batch-cancel` | WRITE | Batch cancel up to 20 option orders |
-| 44 | `okx option orders` | READ | List option orders (live / history / archive) |
-| 45 | `okx option get` | READ | Single option order details |
-| 46 | `okx option positions` | READ | Open option positions with live Greeks |
-| 47 | `okx option fills` | READ | Option trade fill history |
+| 42 | `okx option instruments` | READ | Option chain: list available contracts for an underlying |
+| 43 | `okx option greeks` | READ | Implied volatility + Greeks (delta/gamma/theta/vega) by underlying |
+| 44 | `okx option place` | WRITE | Place option order (call or put, buyer or seller) |
+| 45 | `okx option cancel` | WRITE | Cancel unfilled option order |
+| 46 | `okx option amend` | WRITE | Amend option order price or size |
+| 47 | `okx option batch-cancel` | WRITE | Batch cancel up to 20 option orders |
+| 48 | `okx option orders` | READ | List option orders (live / history / archive) |
+| 49 | `okx option get` | READ | Single option order details |
+| 50 | `okx option positions` | READ | Open option positions with live Greeks |
+| 51 | `okx option fills` | READ | Option trade fill history |
 
 ## Cross-Skill Workflows
 
@@ -579,11 +583,12 @@ Before any authenticated command:
 - Query → `okx swap positions/orders/get/fills/get-leverage/algo orders`
 
 **Futures/Delivery** (instId format: `BTC-USDT-<YYMMDD>`):
-- Place/cancel order → `okx futures place/cancel`
+- Place/cancel/amend order → `okx futures place/cancel/amend`
+- Close position → `okx futures close`
+- Leverage → `okx futures leverage` / `okx futures get-leverage`
 - TP/SL conditional → `okx futures algo place/amend/cancel`
 - Trailing stop → `okx futures algo trail`
-- Algo query → `okx futures algo orders`
-- Query → `okx futures orders/positions/fills/get`
+- Query → `okx futures orders/positions/fills/get/get-leverage/algo orders`
 
 **Options** (instId format: `BTC-USD-250328-95000-C` or `...-P`):
 - Step 1 (required): find valid instId → `okx option instruments --uly BTC-USD`
@@ -610,6 +615,8 @@ Before any authenticated command:
    - Swap/Futures/Option place: **before confirming `--sz`, apply "Sz Conversion Rules for Derivatives"** — if the user's input was a USDT amount, resolve it to contracts first, show the conversion summary, and use the computed `sz` in the confirmation; confirm `--instId`, `--side`, `--sz`, `--tdMode`; confirm `--posSide` if in hedge mode; optionally attach TP/SL with `--tpTriggerPx`/`--slTriggerPx`
    - Swap close: confirm `--instId`, `--mgnMode`, `--posSide`; closes the entire position at market
    - Swap leverage: confirm new leverage and impact on existing positions; cannot exceed exchange max
+   - Futures close: confirm `--instId`, `--mgnMode`, `--posSide`; closes the entire position at market
+   - Futures leverage: confirm new leverage and impact on existing positions; cannot exceed exchange max
    - Algo place (TP/SL): confirm trigger prices; use `--tpOrdPx -1` for market execution at trigger
    - Algo trail (spot/swap/futures): confirm `--callbackRatio` (e.g., `0.02` = 2%) or `--callbackSpread` (fixed price spread); spot does not require `--tdMode` or `--posSide`
 
@@ -618,6 +625,8 @@ Before any authenticated command:
 - After `spot place`: run `okx spot orders` to confirm order is live or `okx spot fills` if market order
 - After `swap place`: run `okx swap orders` or `okx swap positions` to confirm
 - After `swap close`: run `okx swap positions` to confirm position size is 0
+- After `futures place`: run `okx futures orders` or `okx futures positions` to confirm
+- After `futures close`: run `okx futures positions` to confirm position size is 0
 - After spot algo place/trail: run `okx spot algo orders` to confirm algo is active
 - After swap algo place/trail: run `okx swap algo orders` to confirm algo is active
 - After futures algo place/trail: run `okx futures algo orders` to confirm algo is active
@@ -1004,6 +1013,61 @@ okx futures cancel --instId <id> --ordId <id> [--json]
 
 ---
 
+### Futures — Amend Order
+
+```bash
+okx futures amend --instId <id> [--ordId <id>] [--clOrdId <id>] \
+  [--newSz <n>] [--newPx <p>] [--json]
+```
+
+Must provide at least one of `--newSz` or `--newPx`.
+
+---
+
+### Futures — Close Position
+
+```bash
+okx futures close --instId <id> --mgnMode <cross|isolated> \
+  [--posSide <long|short>] [--autoCxl] [--json]
+```
+
+| Param | Required | Default | Description |
+|---|---|---|---|
+| `--instId` | Yes | - | Futures instrument (e.g., `BTC-USDT-260328`) |
+| `--mgnMode` | Yes | - | `cross` or `isolated` |
+| `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
+| `--autoCxl` | No | false | Auto-cancel pending orders before closing |
+
+Closes the **entire** position at market price.
+
+---
+
+### Futures — Set Leverage
+
+```bash
+okx futures leverage --instId <id> --lever <n> --mgnMode <cross|isolated> \
+  [--posSide <long|short>] [--json]
+```
+
+| Param | Required | Default | Description |
+|---|---|---|---|
+| `--instId` | Yes | - | Futures instrument |
+| `--lever` | Yes | - | Leverage multiplier (e.g., `10`) |
+| `--mgnMode` | Yes | - | `cross` or `isolated` |
+| `--posSide` | Cond. | - | `long` or `short` — required for isolated mode in hedge mode |
+
+---
+
+### Futures — Get Leverage
+
+```bash
+okx futures get-leverage --instId <id> --mgnMode <cross|isolated> [--json]
+```
+
+Returns table: `instId`, `mgnMode`, `posSide`, `lever`.
+
+---
+
 ### Futures — List Orders
 
 ```bash
@@ -1263,13 +1327,18 @@ okx option fills [--instId <id>] [--ordId <id>] [--archive] [--json]
 | `swap_get_algo_orders` | List swap algo orders |
 | `futures_place_order` | Place futures order |
 | `futures_cancel_order` | Cancel futures order |
+| `futures_amend_order` | Amend futures order |
+| `futures_close_position` | Close futures position |
+| `futures_set_leverage` | Set futures leverage |
 | `futures_place_algo_order` | Place futures TP/SL algo |
+| `futures_place_move_stop_order` | Place futures trailing stop |
 | `futures_amend_algo_order` | Amend futures algo |
 | `futures_cancel_algo_orders` | Cancel futures algo |
 | `futures_get_orders` | List futures orders |
 | `futures_get_positions` | Futures positions |
 | `futures_get_fills` | Futures fill history |
 | `futures_get_order` | Get single futures order |
+| `futures_get_leverage` | Get futures leverage |
 | `futures_get_algo_orders` | List futures algo orders |
 | `option_get_instruments` | Option chain (list available contracts) |
 | `option_get_greeks` | IV and Greeks by underlying |
@@ -1374,6 +1443,27 @@ okx futures algo trail --instId BTC-USDT-<YYMMDD> --side sell --sz 5 \
 # → Trailing stop placed: TRAIL789 (OK)
 ```
 
+**"Close my BTC futures long position"**
+```bash
+okx futures close --instId BTC-USDT-260328 --mgnMode cross --posSide long
+# → Position closed: BTC-USDT-260328 long
+```
+
+**"Set BTC futures leverage to 10x (cross)"**
+```bash
+okx futures leverage --instId BTC-USDT-260328 --lever 10 --mgnMode cross
+# → Leverage set: 10x BTC-USDT-260328
+```
+
+**"Place a TP at $105k and SL at $88k on my ETH futures long"**
+```bash
+okx futures algo place --instId ETH-USDT-260328 --side sell --ordType oco --sz 5 \
+  --tdMode cross --posSide long \
+  --tpTriggerPx 105000 --tpOrdPx -1 \
+  --slTriggerPx 88000 --slOrdPx -1
+# → Algo order placed: ALGO789012 (OK)
+```
+
 **"Show my open swap positions"**
 ```bash
 okx swap positions
@@ -1438,7 +1528,8 @@ okx option positions
 - **Linear vs inverse**: `BTC-USDT-<YYMMDD>` is linear; `BTC-USD-<YYMMDD>` is inverse (USD face value, BTC settlement). For inverse, `sz = floor(usdtAmt / ctVal)` where ctVal is typically 100 USD
 - **instId format**: delivery futures use date suffix: `BTC-USDT-<YYMMDD>` (e.g., `BTC-USDT-260328` for March 28, 2026 expiry)
 - **Expiry**: futures expire on the delivery date — all positions auto-settle; do not hold through expiry unless intended
-- **No `swap close`**: futures don't have `swap close` — use `futures cancel` + `futures place` for position adjustments
+- **Close position**: use `futures close` to close the **entire** position at market price — same semantics as `swap close`; to partial close, use `futures place` with `--reduceOnly`
+- **Leverage**: `futures leverage` sets leverage for a futures instrument, same constraints as swap; max leverage varies by instrument and account level
 - **Trailing stop**: use either `--callbackRatio` (relative, e.g., `0.02`) or `--callbackSpread` (absolute price), not both; same parameters as swap — `--tdMode` and `--posSide` required in hedge mode
 - **Algo on close side**: always set `--side` opposite to position (e.g., long position → `sell` algo)
 

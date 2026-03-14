@@ -705,12 +705,16 @@ okx spot algo place --instId <id> --side <buy|sell> \
 
 | Param | Required | Default | Description |
 |---|---|---|---|
+| `--instId` | Yes | - | Spot instrument (e.g., `BTC-USDT`) |
+| `--side` | Yes | - | `buy` or `sell` |
+| `--ordType` | Yes | - | `oco`, `conditional`, or `move_order_stop` |
+| `--sz` | Yes | - | Order size in base currency |
 | `--tpTriggerPx` | Cond. | - | Take-profit trigger price |
 | `--tpOrdPx` | Cond. | - | TP order price; use `-1` for market execution |
 | `--slTriggerPx` | Cond. | - | Stop-loss trigger price |
 | `--slOrdPx` | Cond. | - | SL order price; use `-1` for market execution |
-| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
-| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); cannot be combined with `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance; cannot be combined with `--callbackRatio` |
 | `--activePx` | No | - | Price at which trailing stop becomes active |
 
 For `oco`: provide both TP and SL params. For `conditional`: provide only TP or only SL. For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
@@ -749,8 +753,8 @@ okx spot algo trail --instId <id> --side <buy|sell> --sz <n> \
 | `--instId` | Yes | - | Spot instrument (e.g., `BTC-USDT`) |
 | `--side` | Yes | - | `buy` or `sell` — use `sell` to protect a long spot position |
 | `--sz` | Yes | - | Order size in base currency |
-| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
-| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); cannot be combined with `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance; cannot be combined with `--callbackRatio` |
 | `--activePx` | No | - | Price at which trailing stop becomes active |
 
 > Spot trailing stop does not require `--tdMode` or `--posSide` (spot has no margin mode or position side concept).
@@ -905,15 +909,22 @@ okx swap algo place --instId <id> --side <buy|sell> \
 
 | Param | Required | Default | Description |
 |---|---|---|---|
+| `--instId` | Yes | - | Swap instrument (e.g., `BTC-USDT-SWAP`) |
+| `--side` | Yes | - | `buy` or `sell` |
+| `--ordType` | Yes | - | `oco`, `conditional`, or `move_order_stop` |
+| `--sz` | Yes | - | Number of contracts |
+| `--tdMode` | Yes | - | `cross` or `isolated` |
+| `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
+| `--reduceOnly` | No | false | Close-only; will not open a new position if one doesn't exist |
 | `--tpTriggerPx` | Cond. | - | Take-profit trigger price |
 | `--tpOrdPx` | Cond. | - | TP order price; use `-1` for market execution |
 | `--slTriggerPx` | Cond. | - | Stop-loss trigger price |
 | `--slOrdPx` | Cond. | - | SL order price; use `-1` for market execution |
-| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
-| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); cannot be combined with `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance; cannot be combined with `--callbackRatio` |
 | `--activePx` | No | - | Price at which trailing stop becomes active |
 
-`--reduceOnly`: close-only; will not open a new position if one doesn't exist. For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
+For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
 
 ---
 
@@ -930,8 +941,8 @@ okx swap algo trail --instId <id> --side <buy|sell> --sz <n> \
 
 | Param | Required | Default | Description |
 |---|---|---|---|
-| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
-| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); cannot be combined with `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance; cannot be combined with `--callbackRatio` |
 | `--activePx` | No | - | Price at which trailing stop becomes active |
 
 ---
@@ -1138,19 +1149,24 @@ okx futures algo place --instId <id> --side <buy|sell> \
   [--json]
 ```
 
-`--instId` format: `BTC-USDT-<YYMMDD>` (e.g., `BTC-USDT-250328`).
-
 | Param | Required | Default | Description |
 |---|---|---|---|
+| `--instId` | Yes | - | Futures instrument (e.g., `BTC-USDT-<YYMMDD>`) |
+| `--side` | Yes | - | `buy` or `sell` |
+| `--ordType` | Yes | - | `oco`, `conditional`, or `move_order_stop` |
+| `--sz` | Yes | - | Number of contracts |
+| `--tdMode` | Yes | - | `cross` or `isolated` |
+| `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
+| `--reduceOnly` | No | false | Close-only; will not open a new position if one doesn't exist |
 | `--tpTriggerPx` | Cond. | - | Take-profit trigger price |
 | `--tpOrdPx` | Cond. | - | TP order price; use `-1` for market execution |
 | `--slTriggerPx` | Cond. | - | Stop-loss trigger price |
 | `--slOrdPx` | Cond. | - | SL order price; use `-1` for market execution |
-| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
-| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); cannot be combined with `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance; cannot be combined with `--callbackRatio` |
 | `--activePx` | No | - | Price at which trailing stop becomes active |
 
-`--reduceOnly`: close-only; will not open a new position if one doesn't exist. For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
+`--instId` format: `BTC-USDT-<YYMMDD>` (e.g., `BTC-USDT-250328`). For `move_order_stop`: provide `--callbackRatio` or `--callbackSpread` (one required).
 
 ---
 
@@ -1167,8 +1183,8 @@ okx futures algo trail --instId <id> --side <buy|sell> --sz <n> \
 
 | Param | Required | Default | Description |
 |---|---|---|---|
-| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); use this or `--callbackSpread` |
-| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance |
+| `--callbackRatio` | Cond. | - | Trailing callback as a ratio (e.g., `0.02` = 2%); cannot be combined with `--callbackSpread` |
+| `--callbackSpread` | Cond. | - | Trailing callback as fixed price distance; cannot be combined with `--callbackRatio` |
 | `--activePx` | No | - | Price at which trailing stop becomes active |
 
 ---

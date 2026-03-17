@@ -75,21 +75,6 @@ Output fields: `ccy` · `amt` · `earnings` · `rate` · `ts`
 
 ---
 
-## earn savings rate-summary
-
-Requires `--profile live`.
-
-```bash
-okx --profile live earn savings rate-summary          # all currencies
-okx --profile live earn savings rate-summary USDT
-```
-
-Output fields: `ccy` · `avgRate` (historical average) · `estRate` (estimated) · `avgAmt`
-
-> `avgRate` and `estRate` are historical averages — do NOT present as current real APY. Add a note (in user's language) that these are historical reference rates and actual lending rates are market-driven.
-
----
-
 ## earn savings rate-history
 
 Requires `--profile live`.
@@ -113,7 +98,7 @@ Output fields: `ccy` · `rate` · `lendingRate` · `ts`
 | `rate` | Market lending rate threshold. User's minimum must be **≤ `rate`** for funds to be matched. |
 | `lendingRate` | Actual annualized yield earned on lent funds. |
 
-When advising on minimum rate: if user's minimum > `rate`, funds will not be matched. Always display `lendingRate` as the actual yield once matched. `rate-summary` fields `avgRate`/`estRate` are historical averages — do NOT present as current real APY.
+When advising on minimum rate: if user's minimum > `rate`, funds will not be matched. Always display `lendingRate` as the actual yield once matched.
 
 ---
 

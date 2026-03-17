@@ -103,19 +103,7 @@ Cross-skill: `okx-cex-market` for spot price, `okx-cex-portfolio` for balance if
    The above APR is indicative; actual yield is locked at quote execution.
    ```
 
-4. After user selects product and confirms amount, ask **once** whether they want to confirm the quote before placing, or place immediately. Quotes expire in 30 seconds, so place-immediately is recommended. Respond in the user's language.
-
-   **Path A — Place immediately (default/recommended):**
-   - Execute `earn dcd quote-and-buy` immediately, no extra confirmation step.
-
-   **Path B — Preview quote first:**
-   1. `earn dcd quote --productId ... --sz ... --notionalCcy ...`
-   2. Show `annualizedYield`, `absYield`, `idxPx`, `validUntil` (quote expires in 30s)
-   3. Explicitly warn the user the quote expires at `{validUntil}` and execution will be immediate upon confirmation.
-   4. User confirms → `earn dcd buy --quoteId <quoteId>`
-   5. If quote expired (HTTP 500): re-fetch quote, show new details, wait for confirmation again.
-
-   > This confirmation flow applies to the **first order only**. If user has already said "just buy", skip to Path A for subsequent orders.
+4. After user selects product and confirms amount, execute `earn dcd quote-and-buy` immediately — quote and execution happen atomically, no separate confirmation step needed. Respond in the user's language.
 
 5. After `quote-and-buy`: wait 3–5 seconds, then query `earn dcd orders` to confirm. Show locked-in APR and order state.
 
@@ -129,16 +117,16 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 
 **Phase 1 — Preview (indicative):**
 
-1. `okx --profile live earn dcd redeem-quote --ordId <id>`
-2. Show `redeemSz`, `redeemCcy`, `termRate` (positive = gain, negative = loss)
-3. Explicitly state (in user's language) that the above figures are indicative — actual redemption amount is based on the live quote at confirmation time.
-4. Wait for user confirmation
+1. `okx --profile live earn dcd redeem-execute --ordId <id>` — **do NOT run yet**, use `--json` to preview output first if needed, or explain to the user what will happen:
+   - Show estimated `redeemSz`, `redeemCcy`, `termRate` (positive = gain, negative = loss) from a prior `earn dcd orders` query
+2. Explicitly state (in user's language) that figures are indicative — actual amount is based on the live quote at execution time.
+3. Wait for user confirmation
 
 **Phase 2 — Execute (after confirmation):**
 
-5. Immediately run `okx --profile live earn dcd redeem-execute --ordId <id>`
-   - Internally re-fetches a fresh quote and executes — do NOT reuse Phase 1 quoteId
-6. Wait 3–5 seconds, then query `earn dcd orders --ordId <id> --json` to confirm. Show the estimated settlement time from the order response (field: `estSettlementTime` or equivalent) as the expected arrival time. Respond in the user's language.
+4. `okx --profile live earn dcd redeem-execute --ordId <id>`
+   - Internally fetches a fresh quote and executes atomically
+5. Wait 3–5 seconds, then query `earn dcd orders --ordId <id> --json` to confirm. Show the estimated settlement time from the order response as the expected arrival time. Respond in the user's language.
 
 ---
 

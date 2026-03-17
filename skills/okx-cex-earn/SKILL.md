@@ -62,7 +62,7 @@ OKX Earn does not support demo mode. Always use `--profile live` silently — do
 
 ## Command Index
 
-### earn savings — Simple Earn (7 commands)
+### earn savings — Simple Earn (6 commands)
 
 | Command | Type | Auth | Description |
 |---|---|---|---|
@@ -70,26 +70,21 @@ OKX Earn does not support demo mode. Always use `--profile live` silently — do
 | `earn savings purchase --ccy --amt` | WRITE | Required | Subscribe funds to Simple Earn |
 | `earn savings redeem --ccy --amt` | WRITE | Required | Redeem funds from Simple Earn |
 | `earn savings set-rate --ccy --rate` | WRITE | Required | Set minimum lending rate |
-| `earn savings lending-history` | READ | Required | Lending records with earnings detail |
-| `earn savings rate-summary [ccy]` | READ | Required | Market lending rate summary |
-| `earn savings rate-history` | READ | Required | Historical lending rates |
+| `earn savings lending-history` | READ | Required | User's personal lending records with earnings detail |
+| `earn savings rate-history` | READ | Public | Simple Earn lending rates (简单赚币利率) |
 
 For full command syntax, rate field semantics, and confirmation templates, read `{baseDir}/references/savings-commands.md`.
 
-### earn dcd — Dual Investment / 双币赢 (10 commands)
+### earn dcd — Dual Investment / 双币赢 (6 commands)
 
 | Command | Type | Auth | Description |
 |---|---|---|---|
 | `earn dcd pairs` | READ | Required | Available DCD currency pairs |
 | `earn dcd products` | READ | Required | Active products with filters |
-| `earn dcd quote --productId --sz --notionalCcy` | READ | Required | Request real-time quote (TTL 30s) |
-| `earn dcd buy --quoteId` | WRITE | Required | Execute an existing quote |
-| `earn dcd quote-and-buy --productId --sz --notionalCcy` | WRITE | Required | Quote + execute in one step (AI preferred) |
+| `earn dcd quote-and-buy --productId --sz --notionalCcy` | WRITE | Required | Atomic subscribe: quote + execute in one step |
 | `earn dcd order --ordId` | READ | Required | Quick state check for a single order |
 | `earn dcd orders` | READ | Required | Full order list / history |
-| `earn dcd redeem-quote --ordId` | READ | Required | Early redemption preview (TTL 15s) |
-| `earn dcd redeem-execute --ordId` | WRITE | Required | Re-quote + execute redemption (AI preferred) |
-| `earn dcd redeem --ordId --quoteId` | WRITE | Required | Execute redemption with existing quoteId (low-level) |
+| `earn dcd redeem-execute --ordId` | WRITE | Required | Two-step early redemption: preview then execute |
 
 > DCD does **not** support demo/simulated trading mode. Always use `--profile live`.
 

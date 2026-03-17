@@ -32,6 +32,6 @@ Use this checklist before approving a skill MR. It is organized by priority so r
 
 ## 4. Writing Style (Low Priority)
 
-- [ ] **Explain why, not just what** — Prefer explaining the reasoning behind a rule rather than issuing a bare directive. For example: instead of "ALWAYS use `lendingRate` from this endpoint", explain that `avgRate` from `rate-summary` is a historical average (typically 2–3× higher) and is not suitable for display as the current rate.
+- [ ] **Explain why, not just what** — Prefer explaining the reasoning behind a rule rather than issuing a bare directive. For example: instead of "ALWAYS use `lendingRate` from this endpoint", explain that `rate` is the market threshold for fund matching and `lendingRate` is the actual settled yield — so displaying `rate` as APY misleads the user.
 - [ ] **No excessive repetition** — Each concept (e.g. "demo mode not supported") should be explained in detail once and briefly referenced elsewhere. Repeating the same warning in three sections adds noise without adding clarity.
 - [ ] **ALWAYS/NEVER used sparingly** — Reserve all-caps directives for genuine safety constraints (e.g. live trading guards). For style and formatting preferences, use normal casing and explain the rationale instead.

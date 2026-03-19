@@ -13,6 +13,19 @@ Use this checklist before approving a skill MR. It is organized by priority so r
   - `references/cli-commands.md`: detailed CLI parameter tables
   - `references/edge-cases.md`: boundary conditions and error handling
   - `references/examples.md`: input/output examples
+- [ ] **Standard directory structure** — Skills should follow:
+  - `SKILL.md` (required) — core instructions
+  - `scripts/` — executable code for deterministic/repetitive tasks
+  - `references/` — docs loaded into context as needed
+  - `assets/` — templates, icons, fonts
+- [ ] **Domain variant pattern** — Multi-scenario skills should split references per variant, so the agent only loads the relevant one:
+  ```
+  skill-name/
+  ├── SKILL.md (workflow + selection)
+  └── references/
+      ├── variant-a.md
+      └── variant-b.md
+  ```
 
 ---
 
@@ -35,3 +48,4 @@ Use this checklist before approving a skill MR. It is organized by priority so r
 - [ ] **Explain why, not just what** — Prefer explaining the reasoning behind a rule rather than issuing a bare directive. For example: instead of "ALWAYS use `lendingRate` from this endpoint", explain that `rate` is the market threshold for fund matching and `lendingRate` is the actual settled yield — so displaying `rate` as APY misleads the user.
 - [ ] **No excessive repetition** — Each concept (e.g. "demo mode not supported") should be explained in detail once and briefly referenced elsewhere. Repeating the same warning in three sections adds noise without adding clarity.
 - [ ] **ALWAYS/NEVER used sparingly** — Reserve all-caps directives for genuine safety constraints (e.g. live trading guards). For style and formatting preferences, use normal casing and explain the rationale instead.
+- [ ] **Use theory of mind** — Write skills that are general, not overfitted to specific examples. Explain the reasoning so the model can generalize to unseen scenarios.

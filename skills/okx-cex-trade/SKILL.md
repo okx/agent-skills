@@ -247,6 +247,9 @@ After computing sz:
 # Market buy 0.01 BTC (spot)
 okx spot place --instId BTC-USDT --side buy --ordType market --sz 0.01
 
+# Buy $10 worth of SOL (spot, USDT amount)
+okx spot place --instId SOL-USDT --side buy --ordType market --sz 10 --tgtCcy quote_ccy
+
 # Limit sell 0.01 BTC at $100,000 (spot)
 okx spot place --instId BTC-USDT --side sell --ordType limit --sz 0.01 --px 100000
 
@@ -382,11 +385,10 @@ okx spot cancel --instId BTC-USDT --ordId <ordId>
 > User: "Buy $500 worth of ETH at market"
 
 ```
-1. okx-cex-market    okx market ticker ETH-USDT             → get current price to estimate sz
-2. okx-cex-portfolio okx account balance USDT               → confirm available funds ≥ $500
+1. okx-cex-portfolio okx account balance USDT               → confirm available funds ≥ $500
         ↓ user approves
-3. okx-cex-trade     okx spot place --instId ETH-USDT --side buy --ordType market --sz <sz>
-4. okx-cex-trade     okx spot fills --instId ETH-USDT        → confirm fill price and size
+2. okx-cex-trade     okx spot place --instId ETH-USDT --side buy --ordType market --sz 500 --tgtCcy quote_ccy
+3. okx-cex-trade     okx spot fills --instId ETH-USDT        → confirm fill price and size
 ```
 
 ### Open long BTC perp with TP/SL
@@ -653,7 +655,7 @@ Before any authenticated command:
 
 ```bash
 okx spot place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
-  [--px <price>] \
+  [--tgtCcy <base_ccy|quote_ccy>] [--px <price>] \
   [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
   [--json]
@@ -664,7 +666,8 @@ okx spot place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 | `--instId` | Yes | - | Spot instrument (e.g., `BTC-USDT`) |
 | `--side` | Yes | - | `buy` or `sell` |
 | `--ordType` | Yes | - | `market`, `limit`, `post_only`, `fok`, `ioc` |
-| `--sz` | Yes | - | Order size in base currency (e.g., BTC amount) |
+| `--sz` | Yes | - | Order size — unit depends on `--tgtCcy` |
+| `--tgtCcy` | No | base_ccy | `base_ccy`: sz in base currency (e.g. SOL amount); `quote_ccy`: sz in quote currency (e.g. USDT amount) |
 | `--px` | Cond. | - | Price — required for `limit`, `post_only`, `fok`, `ioc` |
 | `--tpTriggerPx` | No | - | Attached take-profit trigger price |
 | `--tpOrdPx` | No | - | TP order price; use `-1` for market execution |
@@ -809,6 +812,7 @@ Returns: `algoId`, `instId`, type, `side`, `sz`, `tpTrigger`, `slTrigger`, `stat
 ```bash
 okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
   --tdMode <cross|isolated> \
+  [--tgtCcy <base_ccy|quote_ccy>] \
   [--posSide <long|short>] [--px <price>] \
   [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
@@ -820,8 +824,9 @@ okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 | `--instId` | Yes | - | Swap instrument (e.g., `BTC-USDT-SWAP`) |
 | `--side` | Yes | - | `buy` or `sell` |
 | `--ordType` | Yes | - | `market`, `limit`, `post_only`, `fok`, `ioc` |
-| `--sz` | Yes | - | Number of contracts |
+| `--sz` | Yes | - | Order size — unit depends on `--tgtCcy` |
 | `--tdMode` | Yes | - | `cross` or `isolated` |
+| `--tgtCcy` | No | base_ccy | `base_ccy`: sz in contracts; `quote_ccy`: sz in USDT amount |
 | `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
 | `--px` | Cond. | - | Price — required for limit orders |
 | `--tpTriggerPx` | No | - | Attached take-profit trigger price |
@@ -1016,6 +1021,7 @@ okx swap algo orders [--instId <id>] [--history] [--ordType <type>] [--json]
 ```bash
 okx futures place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
   --tdMode <cross|isolated> \
+  [--tgtCcy <base_ccy|quote_ccy>] \
   [--posSide <long|short>] [--px <price>] [--reduceOnly] \
   [--tpTriggerPx <p>] [--tpOrdPx <p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx <p|-1>] \
@@ -1024,6 +1030,7 @@ okx futures place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 
 | Param | Required | Default | Description |
 |---|---|---|---|
+| `--tgtCcy` | No | base_ccy | `base_ccy`: sz in contracts; `quote_ccy`: sz in USDT amount |
 | `--tpTriggerPx` | No | - | Attached take-profit trigger price |
 | `--tpOrdPx` | No | - | TP order price; use `-1` for market execution |
 | `--slTriggerPx` | No | - | Attached stop-loss trigger price |
@@ -1598,4 +1605,5 @@ okx option positions
 - Rate limit: 60 order operations per 2 seconds per UID
 - Batch operations (batch cancel, batch amend) are available via MCP tools directly if needed
 - Position mode (`net` vs `long_short_mode`) affects whether `--posSide` is required
-- Spot `--sz` is base currency amount; swap/futures/options `--sz` is always **number of contracts** — never a USDT amount. When the user specifies a USDT (or other currency) amount for derivatives, always run the sz conversion flow in "Sz Conversion Rules for Derivatives" and confirm the calculated contract count with the user before placing
+- Spot/swap/futures place orders support `--tgtCcy`: use `quote_ccy` when user specifies USDT amount, `base_ccy` (default) for base currency or contracts. Do NOT manually convert between currencies — let the API handle it via tgtCcy. Option does not support tgtCcy.
+- **Order amount mismatch safety rule**: If the order would execute at a significantly different amount than the user requested (e.g. due to minSz or conversion), STOP and inform the user. Never auto-adjust order size without explicit user confirmation.

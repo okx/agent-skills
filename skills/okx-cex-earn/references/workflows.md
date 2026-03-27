@@ -138,3 +138,30 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 2. `okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000`
    → explain CALL mechanics, show table, guide user to select term
 3. `okx --profile live earn dcd quote-and-buy --productId <id> --sz <sz> --notionalCcy BTC`
+
+---
+
+## AutoEarn — Check and enable for idle funds
+
+"帮我看看哪些币种可以自动赚币" / "开启 USDT 自动赚币"
+
+1. Run in parallel:
+   - `okx --profile live earn auto-earn status --json` → list currencies supporting auto-earn
+   - `okx --profile live account balance --json` → get available balance per currency
+2. Present as Markdown table, highlight currencies with `off` status that have available balance (from `account balance`)
+3. If user wants to enable:
+   - Show confirmation with 24h restriction warning (see `autoearn-commands.md`)
+   - `okx --profile live earn auto-earn on <ccy>`
+   - `okx --profile live earn auto-earn status <ccy> --json` → verify status changed
+
+---
+
+## AutoEarn — Disable
+
+"关闭 SOL 自动赚币"
+
+1. `okx --profile live earn auto-earn status <ccy> --json` → verify currently enabled
+2. Show confirmation (see `autoearn-commands.md`)
+3. `okx --profile live earn auto-earn off <ccy>`
+4. If 24h error → parse timestamp, tell user when they can retry
+5. If success → `okx --profile live earn auto-earn status <ccy> --json` → verify

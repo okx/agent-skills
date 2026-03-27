@@ -66,12 +66,14 @@ okx --profile live earn savings set-rate --ccy USDT --rate 0.01
 
 ## earn savings lending-history
 
+Returns the **user's personal lending records** — transactions where the user lent coins and earned interest. This is NOT for querying market rates; use `earn savings rate-history` for market rate data.
+
 ```bash
 okx --profile live earn savings lending-history
 okx --profile live earn savings lending-history --ccy USDT --limit 10
 ```
 
-Output fields: `ccy` · `amt` · `earnings` · `rate` · `ts`
+Output fields: `ccy` · `amt` (amount lent) · `earnings` (interest earned) · `rate` (rate applied to this record — same as `rate` in rate-history: the market threshold for that period) · `ts`
 
 ---
 
@@ -95,10 +97,10 @@ Output fields: `ccy` · `rate` · `lendingRate` · `ts`
 
 | Field | Meaning |
 |---|---|
-| `rate` | Market lending rate threshold. User's minimum must be **≤ `rate`** for funds to be matched. |
-| `lendingRate` | Actual annualized yield earned on lent funds. |
+| `rate` | Market lending rate — the rate borrowers pay this period. User's minimum must be **≤ `rate`** for funds to be matched. |
+| `lendingRate` | Actual yield received by lenders. **Always use `lendingRate` as the true APY to show users**, not `rate`. For stablecoins (e.g. USDT/USDC): subject to pro-rata dilution — when eligible supply exceeds borrowing demand, total interest is shared among all eligible lenders, so `lendingRate` may be less than `rate`. For non-stablecoins: `lendingRate` equals `rate`, no dilution. |
 
-When advising on minimum rate: if user's minimum > `rate`, funds will not be matched. Always display `lendingRate` as the actual yield once matched.
+When advising on minimum rate: if user's minimum > `rate`, funds will not be matched. Always display `lendingRate` as the actual yield. **Do NOT raise the minimum rate to increase yield** — the actual yield (`lendingRate`) is determined by market supply/demand, not the minimum rate setting.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: okx-cex-earn
-description: "Manages OKX Simple Earn (flexible savings/lending), On-chain Earn (staking/DeFi), and Dual Investment (DCD/双币赢) via the okx CLI. Use this skill whenever the user wants to check earn balances, subscribe or redeem earn products, view or set lending rates, monitor on-chain staking orders, or interact with dual investment structured products — even if phrased casually as 活期赚币, 赚币, 申购, 赎回, 链上赚币, 质押, 理财, 双币赢, 双币理财, 双币申购, 高卖, 低买, dual investment, DCD, buy low, sell high structured product, earn with target price, or 目标价. Also use when the user asks about idle funds and whether to earn on them."
+description: "Manages OKX Simple Earn (flexible savings/lending), On-chain Earn (staking/DeFi), Dual Investment (DCD/双币赢), and AutoEarn (自动赚币) via the okx CLI. Use this skill whenever the user wants to check earn balances, subscribe or redeem earn products, view or set lending rates, monitor on-chain staking orders, interact with dual investment structured products, or manage auto-earn — even if phrased casually as 活期赚币, 赚币, 申购, 赎回, 链上赚币, 质押, 理财, 双币赢, 双币理财, 双币申购, 高卖, 低买, dual investment, DCD, buy low, sell high structured product, earn with target price, 目标价, 自动赚币, auto earn, auto-earn, 自动借出, 自动质押, auto lend, auto staking, USDG earn, USDG 赚币, 闲置资金自动理财. Also use when the user asks about idle funds and whether to earn on them."
 license: MIT
 metadata:
   author: okx
@@ -56,7 +56,7 @@ OKX Earn does not support demo mode. Always use `--profile live` silently — do
 | Spot / swap / futures / options orders | `okx-cex-trade` |
 | Account balance, positions, transfers | `okx-cex-portfolio` |
 | Grid / DCA trading bots | `okx-cex-bot` |
-| Simple Earn, On-chain Earn, or Dual Investment (双币赢) | **This skill** |
+| Simple Earn, On-chain Earn, Dual Investment (双币赢), or AutoEarn (自动赚币) | **This skill** |
 
 ---
 
@@ -103,6 +103,18 @@ For full command syntax, product concepts, and error codes, read `{baseDir}/refe
 
 For full command syntax and parameters, read `{baseDir}/references/onchain-commands.md`.
 
+### earn auto-earn — AutoEarn / 自动赚币 (3 commands)
+
+| Command | Type | Auth | Description |
+|---|---|---|---|
+| `earn auto-earn status [CCY]` | READ | Required | Query currencies supporting auto-earn and their status |
+| `earn auto-earn on <CCY>` | WRITE | Required | Enable auto-earn for a currency |
+| `earn auto-earn off <CCY>` | WRITE | Required | Disable auto-earn for a currency |
+
+> **24h restriction:** Cannot disable within 24 hours of enabling (API hard limit). Always warn user before enabling.
+
+For full command syntax, earnType inference rules, and MCP tool reference, read `{baseDir}/references/autoearn-commands.md`.
+
 ---
 
 ## Operation Flow
@@ -116,6 +128,10 @@ Before any authenticated command: see [Credential & Profile Check](#credential--
 **Simple Earn / On-chain Earn:**
 - Query balance / history / rates → READ command, proceed directly.
 - Subscribe / redeem / set-rate / on-chain purchase → WRITE command, go to Step 2.
+
+**AutoEarn (自动赚币):**
+- Query auto-earn status → READ, proceed directly.
+- Enable / disable auto-earn → WRITE, go to Step 2. Read `{baseDir}/references/autoearn-commands.md` for confirmation templates and earnType inference.
 
 When user asks to view "earn positions" or "赚币持仓" (regardless of whether they mention DCD explicitly), query all three simultaneously:
 

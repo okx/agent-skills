@@ -4,7 +4,7 @@ description: "This skill should be used when the user asks about 'account balanc
 license: MIT
 metadata:
   author: okx
-  version: "1.0.0"
+  version: "1.2.8"
   homepage: "https://www.okx.com"
   agent:
     requires:
@@ -20,6 +20,11 @@ metadata:
 # OKX CEX Portfolio & Account CLI
 
 Account balance, positions, P&L, bills, fees, and fund transfers on OKX exchange. **Requires API credentials.**
+
+## Preflight
+
+Before running any command, follow [`../_shared/preflight.md`](../_shared/preflight.md).
+Use `metadata.version` from this file's frontmatter as the reference for Step 2.
 
 ## Prerequisites
 
@@ -146,7 +151,7 @@ okx account transfer --ccy USDT --amt 100 --from 18 --to 6
 | # | Command | Type | Description |
 |---|---|---|---|
 | 1 | `okx account balance [ccy]` | READ | Trading account equity, available, frozen |
-| 2 | `okx account asset-balance [ccy]` | READ | Funding account balance |
+| 2 | `okx account asset-balance [ccy] [--valuation]` | READ | Funding account balance; `--valuation` adds earn/trading/funding valuation summary |
 | 3 | `okx account positions` | READ | Open contract/swap positions |
 | 4 | `okx account positions-history` | READ | Closed positions + realized PnL |
 | 5 | `okx account bills` | READ | Account ledger (deposits, withdrawals, trades) |
@@ -284,14 +289,17 @@ Returns table: `currency`, `equity`, `available`, `frozen`. Only shows currencie
 ### Asset Balance — Funding Account
 
 ```bash
-okx account asset-balance [ccy] [--json]
+okx account asset-balance [ccy] [--valuation] [--json]
 ```
 
 | Param | Required | Default | Description |
 |---|---|---|---|
 | `ccy` | No | - | Filter to a single currency |
+| `--valuation` | No | false | Also show total asset valuation across all account types (trading/funding/earn) |
 
 Returns: `ccy`, `bal`, `availBal`, `frozenBal`. Only shows currencies with balance > 0.
+
+With `--valuation`: additionally prints a valuation summary table with `totalBal` and per-account-type breakdown (classic/earn/funding).
 
 ---
 
@@ -438,7 +446,7 @@ Returns: `transId`, `ccy`, `amt`.
 | Tool | Description |
 |---|---|
 | `account_get_balance` | Trading account balance |
-| `account_get_asset_balance` | Funding account balance |
+| `account_get_asset_balance` | Funding account balance. Use `showValuation=true` to include total asset valuation across trading/funding/earn accounts. |
 | `account_get_positions` | Open positions |
 | `account_get_positions_history` | Closed position history |
 | `account_get_bills` | Account bills (recent) |

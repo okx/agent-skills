@@ -1,52 +1,180 @@
-# agent-skills
+# OKX Agent Trade Kit
 
-A collection of AI agent skills for OKX exchange operations. Each skill is a self-contained Markdown file that tells an AI agent how to use the `okx` CLI to perform a specific category of tasks — market data queries, portfolio management, trading, and bot automation.
+[![CI](https://github.com/okx/agent-tradekit/actions/workflows/ci.yml/badge.svg)](https://github.com/okx/agent-tradekit/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/okx/agent-tradekit/branch/master/graph/badge.svg)](https://codecov.io/gh/okx/agent-tradekit)
+[![npm: mcp](https://img.shields.io/npm/v/okx-trade-mcp?label=okx-trade-mcp)](https://www.npmjs.com/package/okx-trade-mcp)
+[![npm downloads: mcp](https://img.shields.io/npm/dt/okx-trade-mcp?label=mcp+total+downloads)](https://www.npmjs.com/package/okx-trade-mcp)
+[![npm: cli](https://img.shields.io/npm/v/okx-trade-cli?label=okx-trade-cli)](https://www.npmjs.com/package/okx-trade-cli)
+[![npm downloads: cli](https://img.shields.io/npm/dt/okx-trade-cli?label=cli+total+downloads)](https://www.npmjs.com/package/okx-trade-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Skills
+[English](README.md) | [中文](README.zh-CN.md)
 
-| Skill | Description | Auth Required |
-|-------|-------------|---------------|
-| [`okx-cex-market`](skills/okx-cex-market/SKILL.md) | Public market data: prices, order books, candles, funding rates, open interest, instruments | No |
-| [`okx-cex-trade`](skills/okx-cex-trade/SKILL.md) | Order management: spot, perpetual swap, delivery futures, options, TP/SL and trailing stop algo orders | Yes |
-| [`okx-cex-portfolio`](skills/okx-cex-portfolio/SKILL.md) | Account operations: balances, positions, P&L, fees, fund transfers | Yes |
-| [`okx-cex-bot`](skills/okx-cex-bot/SKILL.md) | Automated strategies: spot/contract grid bots and DCA bots | Yes |
+OKX Agent Trade Kit — an AI-powered trading toolkit with two standalone packages:
 
-## Requirements
+| Package | Description |
+|---|---|
+| `okx-trade-mcp` | MCP server for Claude / Cursor and any MCP-compatible AI client |
+| `okx-trade-cli` | CLI for operating OKX from terminal |
 
-- [`okx` CLI](https://www.npmjs.com/package/@okx_ai/okx-trade-cli) installed:
-  ```bash
-  npm install -g @okx_ai/okx-trade-cli
-  ```
-- For authenticated skills: OKX API credentials configured in `~/.okx/config.toml`
-
-## Skill Format
-
-Each skill is a Markdown file with a YAML frontmatter header:
-
-```yaml
 ---
-name: skill-name
-description: "Trigger description for the AI agent routing system."
-license: Apache-2.0
-metadata:
-  author: okx
-  version: "1.0.0"
-  agent:
-    requires:
-      bins: ["okx"]
+
+## What is this?
+
+OKX Agent Trade Kit connects AI assistants directly to your OKX account via the [Model Context Protocol](https://modelcontextprotocol.io). Instead of switching between your AI and the exchange UI, you describe what you want — the AI calls the right tools and executes it.
+
+It runs as a **local process** with your API keys stored only on your machine. No cloud services, no data leaving your device.
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **107 tools across 8 modules** | Full trading lifecycle: market data → orders → algo orders → account management → earn → trading bots |
+| **Algo orders built-in** | Conditional, OCO take-profit/stop-loss, trailing stop |
+| **Safety controls** | `--read-only` flag, per-module filtering, built-in rate limiter |
+| **Zero infrastructure** | Local stdio process, no server or database required |
+| **MCP standard** | Works with Claude Desktop, Cursor, openCxxW, and any MCP-compatible client |
+| **Agent Skills included** | Pre-built skill files for AI agent frameworks — drop-in instructions covering market data, trading, portfolio, bots, and earn |
+| **Open source** | MIT license, API keys never leave your machine |
+
+## Modules
+
+| Module | Tools | Description | Docs |
+|--------|-------|-------------|------|
+| `market` | 14 | Ticker, orderbook, candles (+history), index ticker, index candles, price limit, funding rate, mark price, open interest, stock tokens, **technical indicators** (70+ indicators: MA/EMA/RSI/MACD/BB/ATR/KDJ/BTCRAINBOW/AHR999 and more — no auth required) | [→](docs/modules/market.md) |
+| `spot` | 13 | Place/cancel/amend orders, batch orders, fills (+archive), order history (+archive), conditional orders, OCO | [→](docs/modules/spot.md) |
+| `swap` | 17 | Perpetual trading, batch orders, positions, leverage, conditional orders, OCO, trailing stop | [→](docs/modules/swap.md) |
+| `futures` | 18 | Delivery contract trading, positions, fills, order history, amend/close/leverage, batch orders, algo orders (TP/SL, OCO, trailing stop) | [→](docs/modules/futures.md) |
+| `option` | 10 | Options trading: place/cancel/amend/batch-cancel, order history, positions (with Greeks), fills, option chain, IV + Greeks | [→](docs/modules/option.md) |
+| `account` | 14 | Balance, bills (+archive), positions, positions history, fee rates, config, position mode, max withdrawal, max avail size, audit log | [→](docs/modules/account.md) |
+| `earn` | 19 | Simple Earn: balance, purchase, redeem, lending rate (7). On-chain staking/DeFi (6). Dual Currency Deposit/双币赢 (6). Sub-modules: `earn.savings`, `earn.onchain`, `earn.dcd`. Included in `all`. | [→](docs/modules/earn.md) |
+| `bot` | 10 | Trading bots: Grid (5) and DCA — Spot & Contract (5). Sub-modules: `bot.grid`, `bot.dca` | [→](docs/modules/bot.md) |
+
 ---
+
+## Quick Start
+
+**Prerequisites:** Node.js >= 18
+
+```bash
+# 1. Install
+npm install -g @okx_ai/okx-trade-mcp @okx_ai/okx-trade-cli
+
+# 2. Configure OKX API credentials (interactive wizard)
+okx config init
+
+# 3. Register the MCP server with your AI client
+okx-trade-mcp setup --client claude-desktop
+okx-trade-mcp setup --client cursor
+okx-trade-mcp setup --client claude-code
+okx-trade-mcp setup --client vscode          # writes .mcp.json in current directory
 ```
 
-The `description` field is used by the agent to decide when to activate the skill. It should enumerate the natural-language phrases and scenarios that the skill handles.
+> **Alternative:** [One-line install script](docs/configuration.md#one-line-install) — handles Node.js check, install, and client detection automatically.
+>
+> For live trading, multiple profiles, or other clients, see [configuration →](docs/configuration.md).
 
-## Usage
+---
 
-Skills are loaded by AI agents to provide contextual instructions for CLI-based tasks. The agent reads the skill document and follows the command examples and operation flows described within.
+## okx-trade-mcp
 
-## Contributing
+```bash
+okx-trade-mcp                                        # default: spot, swap, account
+okx-trade-mcp --modules market                       # market data only (no auth needed)
+okx-trade-mcp --modules spot,account                 # spot trading + account
+okx-trade-mcp --profile live --modules all           # all modules including earn
+okx-trade-mcp --read-only                            # query tools only, no writes
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or improve skills.
+[Startup scenarios →](docs/configuration.md#startup-scenarios) — [VS Code · Windsurf →](docs/configuration.md)
 
-## License
+---
 
-MIT — see [LICENSE](LICENSE).
+## okx-trade-cli
+
+```bash
+okx market ticker BTC-USDT
+okx spot place --instId BTC-USDT --side buy --ordType market --sz 100
+okx account balance
+```
+
+**[Full CLI reference →](docs/cli-reference.md)**
+
+---
+
+## Agent Skills
+
+Pre-built skill files for AI agent frameworks are included in the [`skills/`](skills/) directory. Each skill tells the agent when to activate and how to use the `okx` CLI for a specific task category.
+
+| Skill | Description | Auth |
+|-------|-------------|:----:|
+| [`okx-cex-market`](skills/okx-cex-market/SKILL.md) | Market data: prices, candles, order books, funding rates, technical indicators | No |
+| [`okx-cex-trade`](skills/okx-cex-trade/SKILL.md) | Order management: spot, swap, futures, options, algo orders | Yes |
+| [`okx-cex-portfolio`](skills/okx-cex-portfolio/SKILL.md) | Account: balances, positions, P&L, transfers | Yes |
+| [`okx-cex-bot`](skills/okx-cex-bot/SKILL.md) | Trading bots: grid and DCA (spot & contract) | Yes |
+| [`okx-cex-earn`](skills/okx-cex-earn/SKILL.md) | Earn: Simple Earn, On-chain staking, Dual Investment, AutoEarn | Yes |
+
+**[Skills documentation →](skills/README.md)**
+
+---
+
+## Reporting Issues
+
+If a tool call or CLI command fails, open an issue and include the full error output.
+
+**MCP** — copy the structured error block shown in your AI client:
+
+```json
+{
+  "tool": "swap_place_order",
+  "error": true,
+  "type": "OkxApiError",
+  "code": "51020",
+  "message": "Order quantity invalid",
+  "endpoint": "POST /api/v5/trade/order",
+  "traceId": "abc123def456",
+  "timestamp": "2026-03-03T10:00:00.000Z",
+  "serverVersion": "1.0.4"
+}
+```
+
+**CLI** — paste the full stderr output:
+
+```
+Error: Order quantity invalid
+TraceId: abc123def456
+Hint: Check order size against instrument minSz.
+Version: okx-trade-cli@1.0.4
+```
+
+See **[FAQ →](docs/faq.md)** for common issues.
+
+---
+
+## Build from Source
+
+```bash
+git clone https://github.com/okx/agent-tradekit.git && cd okx-trade-mcp
+pnpm install && pnpm build
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full development guide.
+
+```
+packages/
+├── core/    # shared client & tools
+├── mcp/     # MCP Server
+└── cli/     # CLI tool
+```
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](ARCHITECTURE.md) | System design and module overview |
+| [Contributing](CONTRIBUTING.md) | Development setup and PR guidelines |
+| [Changelog](CHANGELOG.md) | Version history |
+| [Agent Skills](skills/README.md) | Pre-built skills for AI agent frameworks |
+| [Security](SECURITY.md) | Vulnerability reporting |

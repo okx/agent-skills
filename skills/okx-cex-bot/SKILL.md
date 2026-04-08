@@ -4,7 +4,7 @@ description: Manage Grid bots (spot/contract/coin-margined) and DCA Martingale b
 license: MIT
 metadata:
   author: okx
-  version: "1.2.8"
+  version: "1.3.0"
   homepage: "https://www.okx.com"
   agent:
     emoji: "🤖"
@@ -499,6 +499,6 @@ okx bot dca orders --algoOrdType spot_dca
 
 - All bots run on OKX servers — stopping the CLI does not affect them
 - `--profile` is required for all authenticated commands
-- `--json` returns raw OKX API v5 response
+- `--json` returns the raw OKX API v5 response by default. Add `--env` to wrap the output as `{"env": "<live|demo>", "profile": "<name>", "data": <response>}`
 - Rate limit: 20 requests per 2 seconds per UID
 - Grid `--gridNum` range: 2–100

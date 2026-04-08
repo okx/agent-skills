@@ -1,10 +1,10 @@
 ---
 name: okx-cex-market
-description: "Use this skill when the user asks for: price of any asset, ticker, order book, market depth, candles, OHLCV, funding rate, open interest, mark price, index price, recent trades, price limit, instrument list, stock tokens, metals prices (gold, silver, XAU, XAG), commodities prices (oil, crude, natural gas, OIL), forex rates (EUR/USD, GBP/USD, EURUSDT), bond instruments, non-crypto assets, tradeable instruments by category, or any technical indicator query (RSI, MACD, EMA, MA, Bollinger Bands, KDJ, SuperTrend, AHR999, BTC rainbow, pi-cycle, Mayer Multiple, BTC cycle). All commands are read-only and do NOT require API credentials. Do NOT use for account balance/positions (use okx-cex-portfolio), placing/cancelling orders (use okx-cex-trade), or grid/DCA bots (use okx-cex-bot)."
+description: "Use this skill when the user asks for: price of any asset, ticker, order book, market depth, candles, OHLCV, funding rate, open interest, mark price, index price, recent trades, price limit, instrument list, stock tokens, metals prices (gold, silver, XAU, XAG), commodities prices (oil, crude, natural gas, OIL), forex rates (EUR/USD, GBP/USD, EURUSDT), bond instruments, non-crypto assets, tradeable instruments by category, or any technical indicator query (RSI, MACD, EMA, MA, Bollinger Bands, KDJ, SuperTrend, AHR999, BTC rainbow, and 70+ more indicators). All commands are read-only and do NOT require API credentials. Do NOT use for account balance/positions (use okx-cex-portfolio), placing/cancelling orders (use okx-cex-trade), or grid/DCA bots (use okx-cex-bot)."
 license: MIT
 metadata:
   author: okx
-  version: "1.2.8"
+  version: "1.3.0"
   homepage: "https://www.okx.com"
   agent:
     requires:
@@ -41,7 +41,7 @@ npm install -g @okx_ai/okx-trade-cli
 okx market ticker BTC-USDT   # verify
 ```
 
-Market data commands return the same public data regardless of demo/live mode — no API credentials required. If the user's profile has `demo=true` set and they want live data context, they can use `--live` to confirm they are in live mode (it has no effect on public market data but clarifies environment). Always inform the user which environment is active (demo or live) when it is relevant to their query. No confirmation needed before running any market command. Add `--json` to any command for raw OKX API v5 response.
+Market data commands return the same public data regardless of demo/live mode — no API credentials required. If the user's profile has `demo=true` set and they want live data context, they can use `--live` to confirm they are in live mode (it has no effect on public market data but clarifies environment). Always inform the user which environment is active (demo or live) when it is relevant to their query. No confirmation needed before running any market command. Add `--json` to any command for raw OKX API v5 response. Add `--env` to wrap the output as `{"env", "profile", "data"}`.
 
 ---
 
@@ -63,7 +63,8 @@ Market data commands return the same public data regardless of demo/live mode �
 | 12 | `okx market open-interest --instType <type> [--instId <id>]` | Open interest in contracts and base currency |
 | 13 | `okx market instruments-by-category --instCategory <3\|4\|5\|6\|7>` | Discover instruments by asset category: 3=Stock tokens (AAPL/TSLA), 4=Metals (gold/silver), 5=Commodities (oil/gas), 6=Forex (EUR/USD), 7=Bonds |
 | 13† | `okx market stock-tokens` | **Deprecated** — use `instruments-by-category --instCategory 3` instead |
-| 15 | `okx market indicator <indicator> <instId> [--bar] [--params] [--list] [--limit] [--backtest-time]` | Technical indicator values |
+| 15 | `okx market indicator list` | List all supported indicator names and descriptions |
+| 16 | `okx market indicator <indicator> <instId> [--bar] [--params] [--list] [--limit] [--backtest-time]` | Technical indicator values |
 
 ---
 
@@ -99,7 +100,8 @@ All commands in this skill are read-only.
 - **indicator `--bar`**: uses `1Dutc` not `1D`, `1Wutc` not `1W` — different from candle bar values
 - **indicator arg order**: indicator name before instId — `okx market indicator rsi BTC-USDT`
 - **indicator `--params`**: comma-separated, no spaces — `--params 5,20`
-- **BTC-only indicators**: `ahr999`, `rainbow`, `pi-cycle-top`, `pi-cycle-bottom`, `mayer` — BTC-USDT only
+- **BTC-only indicators**: `ahr999`, `rainbow` — BTC-USDT only
+- **Unknown indicator name**: the API returns empty data silently — run `okx market indicator list` to confirm a name is supported before use
 - **Stock token hours**: US stocks trade Mon–Fri ~09:30–16:00 ET; verify live price before acting
 - **No data returned**: instrument may be delisted — verify with `okx market instruments`
 - **`boll`** is an alias for `bb`
@@ -110,4 +112,5 @@ All commands in this skill are read-only.
 - Rate limit: 20 req / 2 s per IP
 - Candle data is sorted newest-first
 - `vol24h` is in base currency (e.g., BTC for BTC-USDT)
-- `--profile` and `--demo`/`--live` do not affect market data results (public endpoints); they only determine the active trading environment context
+- `--profile` and `--demo`/`--live` do not affect market data results via CLI (public endpoints); they only determine the active trading environment context
+- When calling market MCP tools directly, pass `demo: true` to explicitly query simulated trading market data; the default is always live market data regardless of server demo mode

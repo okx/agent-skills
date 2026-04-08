@@ -1,59 +1,35 @@
 # Options Command Reference
 
-## USDT-to-Contracts Conversion (Options Only)
+## USDT Amount for Options — Use `--tgtCcy quote_ccy` or `--tgtCcy margin`
 
-Options (`*-USD-YYMMDD-strike-C/P`) do **NOT** support `tgtCcy`. When the user specifies a USDT amount for options, you must convert manually:
+Options (`*-USD-YYMMDD-strike-C/P`) support two USDT-based sizing modes:
 
-### Step 1 — Fetch contract parameters
+| `--tgtCcy` | sz meaning | Conversion formula |
+|---|---|---|
+| `quote_ccy` | USDT notional value | `floor(sz / (ctVal * lastPx))` |
+| `margin` | USDT margin cost | `floor(sz * lever / (ctVal * lastPx))` |
 
 ```bash
-okx market instruments --instType OPTION --instId <instId> --json
-okx option greeks --uly <BTC-USD> --expTime <YYMMDD> --json  → markPx (BTC)
-okx market ticker BTC-USDT --json                            → last price (btcPx)
+# Buy BTC call option with 200,000 USDT notional — system converts to contracts automatically
+okx option place --instId BTC-USD-260405-90000-C --side buy \
+  --ordType market --tdMode cash --sz 200000 --tgtCcy quote_ccy
+
+# Sell BTC call option with 50,000 USDT margin (leverage-aware)
+okx option place --instId BTC-USD-260405-90000-C --side sell \
+  --ordType limit --tdMode cross --sz 50000 --tgtCcy margin --px 0.005
 ```
 
-### Step 2 — Convert USDT to contracts
+**Conversion formulas** (for reference):
+- `quote_ccy`: `contracts = floor(usdtAmt / (ctVal × lastPx))`
+- `margin`: `contracts = floor(marginAmt × lever / (ctVal × lastPx))`
 
-```
-markPx unit: base currency (e.g. BTC per contract)
-ctVal unit: base currency (e.g. 0.1 BTC)
+Example — BTC option (ctVal=1 BTC, lastPx=84000):
+- 200,000 USDT notional → floor(200000 / (1 × 84000)) = floor(2.38) = **2 contracts**
+- 50,000 USDT margin at 3x → floor(50000 × 3 / (1 × 84000)) = floor(1.78) = **1 contract**
 
-Formula (buyer cost):
-  sz = floor(usdtAmt / (markPx_BTC × btcPx × ctVal))
-
-Example — BTC-USD-250328-95000-C (markPx=0.005 BTC, btcPx=95000, ctVal=0.1 BTC):
-  200 USDT → floor(200 / (0.005 × 95000 × 0.1))
-           = floor(200 / 47.5) = floor(4.21) = 4 contracts
-  Total premium ≈ 4 × 0.005 × 0.1 = 0.002 BTC ≈ 190 USDT
-
-⚠ Always show both BTC and USDT premium cost to the buyer.
-⚠ Seller margin is also in BTC — remind user of liquidation risk.
-```
-
-### Step 3 — Validate before placing
-
-```
-After computing sz:
-
-1. sz == 0 or sz < minSz
-   → Reject. Inform user:
-     "Amount too small: minimum order is {minSz} contract(s),
-      equivalent to ~{minSz × markPx × ctVal × btcPx} USDT."
-
-2. sz not a multiple of lotSz
-   → Round down to the nearest valid multiple:
-     sz = floor(sz / lotSz) × lotSz
-
-3. sz ≥ minSz
-   → Show conversion summary and wait for user confirmation before placing:
-
-     Conversion summary:
-       Input:    {usdtAmt} USDT
-       markPx:   {markPx}  |  ctVal: {ctVal}  |  btcPx: {btcPx}
-       Raw:      {rawResult}
-       Rounded:  {sz} contracts  (~{actual USDT value})
-     Confirm order with sz={sz}?
-```
+⚠ If the USDT amount is too small for even 1 contract, the command will return an error.
+⚠ Always show both the USDT input and resulting contract count to the user.
+⚠ Seller margin is in BTC — remind user of liquidation risk.
 
 ---
 
@@ -89,7 +65,7 @@ Returns IV (`markVol`) and BS Greeks (`deltaBS`, `gammaBS`, `thetaBS`, `vegaBS`)
 ```bash
 okx option place --instId <id> --side <buy|sell> --ordType <type> \
   --tdMode <cash|cross|isolated> --sz <n> \
-  [--px <price>] [--reduceOnly] [--clOrdId <id>] [--json]
+  [--tgtCcy <quote_ccy|margin>] [--px <price>] [--reduceOnly] [--clOrdId <id>] [--json]
 ```
 
 | Param | Required | Default | Description |
@@ -98,7 +74,8 @@ okx option place --instId <id> --side <buy|sell> --ordType <type> \
 | `--side` | Yes | - | `buy` or `sell` |
 | `--ordType` | Yes | - | `market`, `limit`, `post_only`, `fok`, `ioc` |
 | `--tdMode` | Yes | - | `cash` = buyer (full premium); `cross`/`isolated` = seller (margin) |
-| `--sz` | Yes | - | Number of contracts |
+| `--sz` | Yes | - | Number of contracts (default), or USDT amount when `--tgtCcy` is set |
+| `--tgtCcy` | No | - | `quote_ccy`: sz is USDT notional value; `margin`: sz is USDT margin cost (position = sz * leverage). Both auto-convert to contracts |
 | `--px` | Cond. | - | Required for `limit`, `post_only`, `fok`, `ioc` |
 | `--reduceOnly` | No | false | Close-only; do not open a new position |
 
@@ -187,7 +164,7 @@ okx option fills [--instId <id>] [--ordId <id>] [--archive] [--json]
 
 ## Edge Cases — Options
 
-- **sz unit**: always number of contracts — Options do NOT support `--tgtCcy`, so manually convert when user gives a USDT amount. For inverse options (BTC-USD), premium is quoted in BTC; convert via `sz = floor(usdtAmt / (markPx_BTC × btcPx × ctVal))`
+- **sz unit**: number of contracts by default; use `--tgtCcy quote_ccy` for USDT notional value or `--tgtCcy margin` for USDT margin cost — the system auto-converts. For `quote_ccy`: `sz = floor(usdtAmt / (ctVal × lastPx))`; for `margin`: `sz = floor(marginAmt × lever / (ctVal × lastPx))`. For inverse options (BTC-USD), `ctVal` is in BTC; the conversion uses the BTC-USDT last price automatically.
 - **instId format**: `{uly}-{YYMMDD}-{strike}-{C|P}` — e.g. `BTC-USD-250328-95000-C`; always run `okx option instruments --uly BTC-USD` first to confirm the exact contract exists
 - **tdMode**: buyers always use `cash` (full premium paid upfront, no liquidation); sellers use `cross` or `isolated` (margin required, liquidation risk)
 - **px unit**: quoted in base currency for inverse options (e.g. `0.005` = 0.005 BTC premium per contract); always show equivalent USDT value to the user

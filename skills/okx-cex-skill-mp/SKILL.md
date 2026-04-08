@@ -4,7 +4,7 @@ description: "Use this skill when the user asks to: 'find a trading skill', 'sea
 license: MIT
 metadata:
   author: okx
-  version: "1.2.8"
+  version: "1.3.0"
   homepage: "https://www.okx.com"
   agent:
     requires:
@@ -20,6 +20,10 @@ metadata:
 # OKX Skills Marketplace
 
 Browse, search, install, and manage AI trading skills from the OKX Skills Marketplace. Skills are modular AI prompt packages that extend your trading assistant's capabilities — covering market analysis, trade execution, risk management, and portfolio optimization.
+
+> **⚠️ Third-Party Content Notice**
+> Skills available on the OKX Skills Marketplace are created and published by **independent third-party developers**, not by OKX. OKX does not author, review, endorse, or take responsibility for the content, accuracy, or behavior of any third-party skill. Always review a skill's SKILL.md before use, and only install skills from authors you trust.
+> When a skill is installed via `okx skill add`, it is downloaded from the marketplace and saved locally to your agent's skill directory (e.g., `~/.agents/skills/<skill-name>/`). The skill runs entirely on your local machine with your agent's full permissions — treat it with the same caution as installing any third-party software.
 
 **Skill routing**
 - Skill marketplace → `okx-cex-skill-mp` (this skill)
@@ -63,12 +67,12 @@ Never skip `add` and go straight to `download` unless `add` has already failed.
 | 2 | `okx skill search --categories <id>` | Filter skills by category |
 | 3 | `okx skill categories` | List all available categories |
 | 4 | `okx skill add <name>` | Download + install to all detected agents |
-| 5 | `okx skill download <name> [--dir <path>]` | Download zip only (default: current dir) |
+| 5 | `okx skill download <name> [--dir <path>] [--format zip\|skill]` | Download package (default format: zip) |
 | 6 | `okx skill list` | List locally installed skills |
 | 7 | `okx skill check <name>` | Check if a newer version is available |
 | 8 | `okx skill remove <name>` | Uninstall a skill |
 
-Add `--json` to any command for raw JSON output.
+Add `--json` to any command for raw JSON output. Add `--env` to wrap the output as `{"env", "profile", "data"}`.
 
 ---
 
@@ -147,6 +151,11 @@ Output:
   Path: /Users/me/Downloads/grid-premium.zip
 ```
 
+To download as `.skill` format (for agents that recognize the extension):
+```bash
+okx skill download grid-premium --dir ~/Downloads/ --format skill
+```
+
 The zip contains:
 - `SKILL.md` — the skill's main instruction file
 - `_meta.json` — metadata (name, version, title, description)
@@ -202,7 +211,7 @@ When the CLI is unavailable (e.g., Claude Desktop without terminal access), the 
 |----------|---------------|-------------|
 | `skills_search` | `okx skill search` | Search by keyword/category. Response includes `totalPage` for pagination. |
 | `skills_get_categories` | `okx skill categories` | List categories |
-| `skills_download` | `okx skill download` | Download zip to directory |
+| `skills_download` | `okx skill download` | Download package to directory (default format: `.skill`; pass `format: "zip"` for zip) |
 
 Note: MCP tools only support search and download. The full install flow (`add`) requires CLI access.
 

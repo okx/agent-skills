@@ -1253,63 +1253,45 @@ $ okx market funding-rate --instId SOL-USDT-SWAP
 ╚═══════════════════════════════════════════════════╝
 ```
 
-### 7.5 Demo 交易操作演示
+### 7.5 Demo 交易操作演示（真实执行记录）
 
-虽然当前无绞肉信号，但以下演示完整的下单流程，以便用户了解操作步骤：
+以下为 2026-04-16 在 OKX 模拟盘上的**真实交易记录**（非模拟数据）：
 
 ```bash
 # 1. 检查 Demo 账户余额
 $ okx --demo account balance
-{
-  "totalEq": "500.00",
-  "availBal": "500.00",
-  "frozenBal": "0.00",
-  "ordFrozen": "0.00"
-}
+Environment: demo (simulated trading)
 
-# 2. 假设信号触发，下单做空 BTC
-#    （以下为教学演示，当前未实际触发信号）
+currency  equity              available           frozen
+BTC       1.0013476503        1.0013468518        0.0000008
+USDT      13465.0265149       11122.0767039       2342.9498110
+ETH       1                   1                   0
+SOL       0.001219779         0.001219779         0
+
+# 2. 演示做空 BTC（假设绞肉信号触发）
 $ okx --demo swap place \
     --instId BTC-USDT-SWAP \
-    --side sell \
-    --ordType market \
-    --sz 1 \
-    --posSide short \
-    --tdMode cross
-Order placed: OK ✅
-ordId: "1234567890"
+    --side sell --ordType market --sz 1 \
+    --posSide short --tdMode isolated
+Order placed: 3484406839704686592 (OK) ✅
 
-# 3. 设置止损（入场价 + 1.5 ATR）
-$ okx --demo swap place \
-    --instId BTC-USDT-SWAP \
-    --side buy \
-    --ordType conditional \
-    --sz 1 \
-    --posSide short \
-    --tdMode cross \
-    --slTriggerPx 76459 \
-    --slOrdPx -1
-Stop-loss placed: OK ✅
-
-# 4. 查看持仓
+# 3. 查看持仓
 $ okx --demo swap positions
-{
-  "instId": "BTC-USDT-SWAP",
-  "posSide": "short",
-  "pos": "1",
-  "avgPx": "74659",
-  "upl": "0.00",
-  "lever": "1.49",
-  "liqPx": "112847.2"
-}
+Environment: demo (simulated trading)
 
-# 5. 信号结束后平仓
+instId         side   size  avgPx     upl     uplRatio  lever
+BTC-USDT-SWAP  short  1     74842.7   +0.003  +0.001%   3
+
+# 4. 平仓
 $ okx --demo swap close \
     --instId BTC-USDT-SWAP \
-    --posSide short \
-    --tdMode cross
-Position closed: OK ✅
+    --posSide short --mgnMode isolated
+Position closed: BTC-USDT-SWAP short ✅
 ```
+
+> 以上 orderId `3484406839704686592` 为真实模拟盘订单号，可在 OKX Demo 环境中验证。
+>
+> 交互式 Live Demo 页面：https://wangyangmingsss.github.io/meat-grinder-skill/live-demo.html
 
 ### 7.6 真实操作要点
 

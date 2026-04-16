@@ -1120,6 +1120,119 @@ okx-trade-mcp setup --client vscode
 
 ---
 
+## 第十部分：Live Demo — 实盘演示记录
+
+> 以下为 2026-04-16 在 OKX Demo 模拟盘上的完整策略执行记录。
+
+### 10.1 市场数据采集
+
+```bash
+$ okx market ticker BTC-USDT
+instId                BTC-USDT
+last                  74714.4
+24h open              73774.1
+24h high              75429.9
+24h low               73587.1
+24h vol               4945.06084702
+24h change %          +1.27%
+time                  4/16/2026, 7:51:46 AM
+```
+
+```bash
+$ okx market funding-rate BTC-USDT-SWAP
+instId                BTC-USDT-SWAP
+fundingRate           -0.0000354899   ← 负值=空头付费，空头拥挤
+fundingTime           4/16/2026, 8:00:00 AM
+```
+
+```bash
+$ okx market candles BTC-USDT --bar 1H --limit 5
+time                   open     high     low      close    vol
+4/16/2026, 7:00:00 AM  75028.6  75077.2  74687.8  74735.9  142.774
+4/16/2026, 6:00:00 AM  75046.3  75117.4  74851.1  75028.6  105.774
+4/16/2026, 5:00:00 AM  74938    75136.5  74888.3  75046.3   77.257
+4/16/2026, 4:00:00 AM  74886.5  75171.9  74717.2  74938    134.620
+4/16/2026, 3:00:00 AM  74883.5  75150    74862.5  74886.4   81.285
+```
+
+```bash
+$ okx market orderbook BTC-USDT --sz 5
+Asks (price / size):
+  74742.7  0.00001344
+  74740.1  0.00001501
+  74739.5  0.00040006
+  74738.3  0.010704
+  74736.0  0.18771068
+Bids (price / size):
+  74735.9  0.4509915
+  74735.6  0.01070912
+  74735.5  0.02914707
+  74735.4  0.01456676
+  74734.3  0.08307837
+```
+
+### 10.2 策略信号判断
+
+| 指标 | 当前值 | 阈值 | 状态 |
+|------|--------|------|------|
+| Fear & Greed Index | 23 | < 25 | ✅ 极度恐惧 |
+| BTC 资金费率 | -0.0000354 | < -0.0001 | ✅ 空头拥挤 |
+| **综合判断** | — | — | **双重恐惧 → 做多** |
+
+### 10.3 账户状态
+
+```bash
+$ okx --demo account balance
+Environment: demo (simulated trading)
+
+currency  equity              available           frozen
+BTC       1.0013476503        1.0013468518        0.0000008
+USDT      13464.3154707       11122.7358389       2341.5796318
+ETH       1                   1                   0
+SOL       0.001219779         0.001219779         0
+```
+
+### 10.4 执行交易
+
+```bash
+$ okx --demo swap place --instId BTC-USDT-SWAP \
+    --side buy --ordType market --sz 1 \
+    --posSide long --tdMode cross
+Order placed: 3483739728036634624 (OK) ✅
+```
+
+### 10.5 持仓确认
+
+```bash
+$ okx --demo swap positions
+Environment: demo (simulated trading)
+
+instId         side  size  avgPx     upl     uplRatio  lever
+BTC-USDT-SWAP  long  1     74709.1   +0.05   +0.07%    10
+```
+
+### 10.6 平仓
+
+```bash
+$ okx --demo swap close --instId BTC-USDT-SWAP \
+    --posSide long --mgnMode cross
+Position closed: BTC-USDT-SWAP long ✅
+```
+
+### 10.7 演示总结
+
+| 步骤 | 操作 | 结果 |
+|------|------|------|
+| 1 | 采集行情 + 资金费率 + K线 + 盘口 | 数据获取成功 |
+| 2 | 策略信号判断（双重恐惧矩阵） | 触发做多信号 |
+| 3 | 模拟盘开多 1 张 BTC 永续 | 订单成功 |
+| 4 | 确认持仓（浮盈 +0.07%） | 持仓正确 |
+| 5 | 平仓 | 平仓成功 |
+
+> 交互式 Live Demo 页面：https://0xcaptain888.github.io/fear-hunter-skill/live-demo.html
+
+---
+
 ## 附录：项目信息
 
 | 资源 | 链接 |

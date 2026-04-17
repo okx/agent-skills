@@ -11,7 +11,7 @@ okx upgrade
 This command:
 - Silently skips if the last check was fewer than 12 hours ago
 - Queries `dist-tags.latest` from the npm registry if the cache has expired
-- Installs `@okx_ai/okx-trade-mcp` and `@okx_ai/okx-trade-cli@1.3.1-beta.13` if a newer stable version is found
+- Installs `@okx_ai/okx-trade-mcp` and `@okx_ai/okx-trade-cli@1.3.1-beta.14` if a newer stable version is found
 - Updates `~/.okx/last_check` after a successful check
 
 ## Optional: capability discovery

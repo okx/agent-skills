@@ -13,7 +13,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@okx_ai/okx-trade-cli@1.3.1-beta.13"
+        package: "@okx_ai/okx-trade-cli@1.3.1-beta.14"
         bins: ["okx"]
         label: "Install okx CLI (npm)"
 ---
@@ -30,7 +30,7 @@ Use `metadata.version` from this file's frontmatter as the reference for Step 2.
 ## Prerequisites
 
 ```bash
-npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
+npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.14
 okx config init   # select site -> follow browser OAuth flow
 ```
 

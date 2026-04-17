@@ -12,7 +12,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@okx_ai/okx-trade-cli@1.3.1-beta.13"
+        package: "@okx_ai/okx-trade-cli@1.3.1-beta.14"
         bins: ["okx"]
         label: "Install okx CLI (npm)"
 ---
@@ -39,7 +39,7 @@ Crypto news aggregation and coin sentiment analysis for OKX. All commands are **
 
 1. Install `okx` CLI:
    ```bash
-   npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
+   npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.14
    ```
 2. Configure credentials in `~/.okx/config.toml`
 3. Verify setup:

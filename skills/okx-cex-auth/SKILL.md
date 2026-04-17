@@ -12,7 +12,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@okx_ai/okx-trade-cli@1.3.1-beta.13"
+        package: "@okx_ai/okx-trade-cli@1.3.1-beta.14"
         bins: ["okx"]
         label: "Install okx CLI (npm)"
 ---
@@ -69,40 +69,67 @@ Parse the output. Locate `profiles[<default_profile>]`. Look at `api_key`:
 
 If the user later explicitly says "I want to use API key instead", then stop §A and let them configure it themselves — but you must NEVER initiate that suggestion.
 
-1. Run the login command (non-blocking):
+#### §A.1 — Ask site first (MANDATORY)
 
-   ```bash
-   okx auth login --manual --site global
-   ```
+Before running any login command, ask the user to pick a site. Output this message EXACTLY (do not rephrase, do not translate, do not add extra text):
 
-   (Use `--site eea` or `--site us` only if the user explicitly requested EEA or US. Default is `global`.)
+```
+您需要选择 OKX 站点：
 
-2. Parse the output. It is a JSON-shaped block containing `verification_uri` and `user_code`. Surface them to the user exactly as:
+1. Global (www.okx.com)
+2. EEA (my.okx.com)
+3. US (app.okx.com)
 
-   ```
-   请打开以下链接，输入验证码完成授权：
-   授权地址：<verification_uri>
-   验证码：<user_code>
-   授权完成后告诉我，我继续后续操作。
-   ```
+请告诉我您要选择哪个站点（1、2 或 3）。
+```
 
-   Do **not** rephrase, do not ask extra questions, do not prompt for site/demo.
+Wait for the user's reply. Map the reply to a `--site` value (do NOT pick a default on empty reply — ask again instead):
 
-3. Poll every 10 seconds (up to ~10 minutes), running:
+| User reply     | `--site` value |
+| -------------- | -------------- |
+| `1` / `global` | `global`       |
+| `2` / `eea`    | `eea`          |
+| `3` / `us`     | `us`           |
+| empty / other  | ask again      |
 
-   ```bash
-   okx auth status --json
-   ```
+#### §A.2 — Run login with the chosen site
 
-   Read the `status` field:
+```bash
+okx auth login --manual --site <selected>
+```
 
-   | `status`        | Action                                                         |
-   | --------------- | -------------------------------------------------------------- |
-   | `pending`       | Keep polling                                                   |
-   | `logged_in`     | Stop polling. Resume the user's original request.             |
-   | `not_logged_in` | Device code expired. Ask the user if they want to retry (§A.1) |
+Non-blocking. Exits immediately with a JSON payload.
 
-4. **Do not run any other `okx` command while polling.**
+#### §A.3 — Surface the URL and code
+
+Parse the JSON output. It contains `verificationUri` and `userCode`. Surface them to the user exactly as (do NOT rephrase):
+
+```
+请打开以下链接，输入验证码完成授权：
+授权地址：<verificationUri>
+验证码：<userCode>
+授权完成后告诉我，我继续后续操作。
+```
+
+Do not ask extra questions. Do not re-ask for site (already done in §A.1). Do not mention API keys.
+
+#### §A.4 — Poll for completion
+
+Poll every 10 seconds (up to ~10 minutes):
+
+```bash
+okx auth status --json
+```
+
+Read the `status` field:
+
+| `status`        | Action                                                         |
+| --------------- | -------------------------------------------------------------- |
+| `pending`       | Keep polling                                                   |
+| `logged_in`     | Stop polling. Resume the user's original request.             |
+| `not_logged_in` | Device code expired. Ask the user if they want to retry (§A.1) |
+
+**Do not run any other `okx` command while polling.**
 
 ### §B — API key configured → fix the key, never switch to OAuth
 

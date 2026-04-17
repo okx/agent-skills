@@ -12,7 +12,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@okx_ai/okx-trade-cli"
+        package: "@okx_ai/okx-trade-cli@1.3.1-beta.13"
         bins: ["okx"]
         label: "Install okx CLI (npm)"
 ---
@@ -28,7 +28,7 @@ Use `metadata.version` from this file's frontmatter as the reference for Step 2.
 
 1. Install `okx` CLI:
    ```bash
-   npm install -g @okx_ai/okx-trade-cli
+   npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
    ```
 2. Configure credentials:
    ```bash

@@ -12,7 +12,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@okx_ai/okx-trade-cli"
+        package: "@okx_ai/okx-trade-cli@1.3.1-beta.13"
         bins: ["okx"]
         label: "Install okx CLI (npm)"
 ---
@@ -36,7 +36,7 @@ Use `--site <global|eea|us>` on `okx auth login` to override the configured site
 Install `okx` CLI if not already installed:
 
 ```bash
-npm install -g @okx_ai/okx-trade-cli
+npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
 ```
 
 ## First-Time Setup

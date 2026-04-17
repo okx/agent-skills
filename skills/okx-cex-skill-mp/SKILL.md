@@ -12,7 +12,7 @@ metadata:
     install:
       - id: npm
         kind: node
-        package: "@okx_ai/okx-trade-cli"
+        package: "@okx_ai/okx-trade-cli@1.3.1-beta.13"
         bins: ["okx"]
         label: "Install okx CLI (npm)"
 ---
@@ -36,7 +36,7 @@ Browse, search, install, and manage AI trading skills from the OKX Skills Market
 
 1. Install `okx` CLI:
    ```bash
-   npm install -g @okx_ai/okx-trade-cli
+   npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
    ```
 2. Configure API credentials (required for marketplace access):
    ```bash

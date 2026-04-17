@@ -18,7 +18,7 @@ Pre-built skills for AI agents to operate OKX via the `okx` CLI. Each skill is a
 
 - [`okx` CLI](https://www.npmjs.com/package/@okx_ai/okx-trade-cli) installed:
   ```bash
-  npm install -g @okx_ai/okx-trade-cli
+  npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
   ```
 - For authenticated skills: OKX API credentials configured in `~/.okx/config.toml`:
   ```bash

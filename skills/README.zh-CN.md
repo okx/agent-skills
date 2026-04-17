@@ -18,7 +18,7 @@
 
 - 已安装 [`okx` CLI](https://www.npmjs.com/package/@okx_ai/okx-trade-cli)：
   ```bash
-  npm install -g @okx_ai/okx-trade-cli
+  npm install -g @okx_ai/okx-trade-cli@1.3.1-beta.13
   ```
 - 需要鉴权的 skill：需在 `~/.okx/config.toml` 中配置 OKX API 凭证：
   ```bash

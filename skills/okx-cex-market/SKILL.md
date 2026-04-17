@@ -4,7 +4,7 @@ description: "Use this skill when the user asks for: price of any asset, ticker,
 license: MIT
 metadata:
   author: okx
-  version: "1.3.1"
+  version: "1.3.0"
   homepage: "https://www.okx.com"
   agent:
     requires:
@@ -107,7 +107,6 @@ All commands in this skill are read-only.
 - **`market filter` sortBy values**: `last` `chg24hPct` `marketCapUsd` `volUsd24h` `fundingRate` `oiUsd` `listTime` — default `volUsd24h`
 - **`market filter` ctType**: `linear` or `inverse` (SWAP/FUTURES only); omit for SPOT
 - **`market filter` quoteCcy**: comma-separated list supported, e.g. `--quoteCcy USDT,USDC`
-- **`market filter` SPOT + quoteCcy**: when `--instType SPOT`, the API returns instruments across **all** quote currencies (USDT, USDC, BTC, ETH, etc.) mixed together — this pollutes sort order and bloats results. Always pass `--quoteCcy USDT` by default unless the user explicitly asks for other quote currencies.
 - **`market filter` chg24hPct**: value is a percentage number — `--minChg24hPct -5` means -5%, `--maxChg24hPct 10` means 10%
 - **`market oi-history` ts**: Unix ms timestamp; returns bars with ts ≤ this value for historical pagination
 - **`market oi-history` / `oi-change` bar**: valid values `5m` `15m` `1H` `4H` `1D` — default `1H`
@@ -128,5 +127,4 @@ All commands in this skill are read-only.
 - Rate limit: 20 req / 2 s per IP
 - Candle data is sorted newest-first
 - `vol24h` is in base currency (e.g., BTC for BTC-USDT)
-- `--profile` and `--demo`/`--live` do not affect market data results via CLI (public endpoints); they only determine the active trading environment context
-- When calling market MCP tools directly, pass `demo: true` to explicitly query simulated trading market data; the default is always live market data regardless of server demo mode
+- `--demo`/`--live` and `--profile` do not affect market data results via CLI (public endpoints); they only determine the active trading environment context

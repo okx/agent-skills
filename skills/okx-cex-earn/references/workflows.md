@@ -4,10 +4,10 @@
 
 "我有多少闲置资金可以赚币？"
 
-1. `okx --profile live account asset-balance <ccy>` → idle funds in funding account
-2. `okx --profile live account balance <ccy>` → idle funds in trading account
-3. `okx --profile live earn savings balance <ccy>` → already in earn
-4. `okx --profile live earn savings rate-history --ccy <ccy> --limit 1 --json` → current `lendingRate` (actual yield)
+1. `okx account asset-balance <ccy>` → idle funds in funding account
+2. `okx account balance <ccy>` → idle funds in trading account
+3. `okx earn savings balance <ccy>` → already in earn
+4. `okx earn savings rate-history --ccy <ccy> --limit 1 --json` → current `lendingRate` (actual yield)
 → summarize idle funds and suggest subscribing if lendingRate is acceptable
 
 ---
@@ -17,13 +17,13 @@
 "帮我把资金账户里的 1000 USDT 申购赚币"
 
 1. Run in parallel:
-   - `okx --profile live account asset-balance USDT` → verify balance ≥ 1000
-   - `okx --profile live earn savings rate-history --ccy USDT --limit 1 --json` → current APY
+   - `okx account asset-balance USDT` → verify balance ≥ 1000
+   - `okx earn savings rate-history --ccy USDT --limit 1 --json` → current APY
 2. Show confirmation summary (see savings-commands.md), wait for user confirmation
-3. `okx --profile live earn savings purchase --ccy USDT --amt 1000`
+3. `okx earn savings purchase --ccy USDT --amt 1000`
 4. Run in parallel to verify:
-   - `okx --profile live earn savings balance USDT --json` → confirm position updated
-   - `okx --profile live earn savings rate-history --ccy USDT --limit 1 --json` → show current lendingRate in position summary
+   - `okx earn savings balance USDT --json` → confirm position updated
+   - `okx earn savings rate-history --ccy USDT --limit 1 --json` → show current lendingRate in position summary
 
 ---
 
@@ -31,10 +31,10 @@
 
 "赎回我的 USDT 赚币，划转到交易账户"
 
-1. `okx --profile live earn savings balance USDT` → check redeemable amount; show summary, wait for confirmation
-2. `okx --profile live earn savings redeem --ccy USDT --amt <amt>`
+1. `okx earn savings balance USDT` → check redeemable amount; show summary, wait for confirmation
+2. `okx earn savings redeem --ccy USDT --amt <amt>`
 3. _(Optional — requires **Withdraw** permission on the API key)_
-   `okx --profile live account transfer --ccy USDT --amt <amt> --from 6 --to 18` (CLI account type IDs: 6=funding, 18=trading)
+   `okx account transfer --ccy USDT --amt <amt> --from 6 --to 18` (CLI account type IDs: 6=funding, 18=trading)
 
    If step 3 fails with a permission error, inform the user that their API key does not have Withdraw permission and they should complete the transfer manually in the OKX app.
 
@@ -45,13 +45,13 @@
 "帮我申购 USDT 定期赚币，7天" / "subscribe USDT fixed earn for 7 days"
 
 1. Run in parallel:
-   - `okx --profile live earn savings rate-history --ccy USDT --json` → verify 7-day term exists and has quota
-   - `okx --profile live account asset-balance USDT` → verify balance ≥ requested amount
+   - `okx earn savings rate-history --ccy USDT --json` → verify 7-day term exists and has quota
+   - `okx account asset-balance USDT` → verify balance ≥ requested amount
 2. If term not available or sold out → inform user, suggest alternative terms from offers list
-3. Preview: `okx --profile live earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --json` (without `--confirm`)
+3. Preview: `okx earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --json` (without `--confirm`)
 4. Show confirmation summary (see `savings-commands.md` Fixed-Term Confirmation Templates), wait for user confirmation
-5. Execute: `okx --profile live earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --confirm --json`
-6. Verify: `okx --profile live earn savings fixed-orders --ccy USDT --state pending --json` → confirm order created
+5. Execute: `okx earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --confirm --json`
+6. Verify: `okx earn savings fixed-orders --ccy USDT --state pending --json` → confirm order created
 
 ---
 
@@ -59,14 +59,14 @@
 
 "赎回我的定期赚币订单" / "redeem my fixed earn order"
 
-1. `okx --profile live earn savings fixed-orders --json` → display numbered order list; let user pick by number (do not expect them to type reqId manually)
+1. `okx earn savings fixed-orders --json` → display numbered order list; let user pick by number (do not expect them to type reqId manually)
 2. Check order state:
    - `pending` → proceed to step 3
    - `earning` → inform user: locked period active, cannot redeem early. Show expiry date.
    - `settled` / `cancelled` → inform user: order already completed
 3. Show redemption summary (see `savings-commands.md` Fixed-Term Confirmation Templates), wait for confirmation
-4. `okx --profile live earn savings fixed-redeem <id> --json`
-5. `okx --profile live earn savings fixed-orders --json` → confirm order cancelled
+4. `okx earn savings fixed-redeem <id> --json`
+5. `okx earn savings fixed-orders --json` → confirm order cancelled
 
 ---
 
@@ -74,10 +74,10 @@
 
 "帮我申购 ETH 链上赚币"
 
-1. `okx --profile live account asset-balance ETH` → verify available balance
-2. `okx --profile live earn onchain offers --ccy ETH` → show products, compare APY; show summary with risk disclaimer, wait for confirmation
-3. `okx --profile live earn onchain purchase --productId <id> --ccy ETH --amt <amt>`
-4. `okx --profile live earn onchain orders` → confirm order created
+1. `okx account asset-balance ETH` → verify available balance
+2. `okx earn onchain offers --ccy ETH` → show products, compare APY; show summary with risk disclaimer, wait for confirmation
+3. `okx earn onchain purchase --productId <id> --ccy ETH --amt <amt>`
+4. `okx earn onchain orders` → confirm order created
 
 ---
 
@@ -88,9 +88,9 @@
 When user does **not** specify a currency pair, run in parallel:
 
 ```bash
-okx --profile live earn dcd pairs                                              # supported pairs
-okx --profile live market ticker BTC-USDT                                     # spot price
-okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType <C|P>  # default BTC-USDT
+okx earn dcd pairs                                              # supported pairs
+okx market ticker BTC-USDT                                     # spot price
+okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType <C|P>  # default BTC-USDT
 ```
 
 - Show BTC-USDT as default result
@@ -99,9 +99,9 @@ okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType <C|
 When user **specifies** a currency (e.g. "BTC高卖"), run ALL three in parallel **before rendering the table**:
 
 ```bash
-okx --profile live market ticker {baseCcy}-USDT               # 1. Spot price (MUST)
-okx --profile live account asset-balance {ccy}                # 2. Balance (MUST): CALL→baseCcy, PUT→quoteCcy
-okx --profile live earn dcd products --baseCcy {baseCcy} --quoteCcy {quoteCcy} --optType {C|P} --json  # 3. Products
+okx market ticker {baseCcy}-USDT               # 1. Spot price (MUST)
+okx account asset-balance {ccy}                # 2. Balance (MUST): CALL→baseCcy, PUT→quoteCcy
+okx earn dcd products --baseCcy {baseCcy} --quoteCcy {quoteCcy} --optType {C|P} --json  # 3. Products
 ```
 
 > ⚠️ Do NOT render the product table until all three are complete. Show spot price and balance above the table.
@@ -147,14 +147,14 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 
 **Phase 1 — Preview (indicative):**
 
-1. `okx --profile live earn dcd redeem-execute --ordId <id>` — **do NOT run yet**, use `--json` to preview output first if needed, or explain to the user what will happen:
+1. `okx earn dcd redeem-execute --ordId <id>` — **do NOT run yet**, use `--json` to preview output first if needed, or explain to the user what will happen:
    - Show estimated `redeemSz`, `redeemCcy`, `termRate` (positive = gain, negative = loss) from a prior `earn dcd orders` query
 2. Explicitly state (in user's language) that figures are indicative — actual amount is based on the live quote at execution time.
 3. Wait for user confirmation
 
 **Phase 2 — Execute (after confirmation):**
 
-4. `okx --profile live earn dcd redeem-execute --ordId <id>`
+4. `okx earn dcd redeem-execute --ordId <id>`
    - Internally fetches a fresh quote and executes atomically
 5. Wait 3–5 seconds, then query `earn dcd orders --ordId <id> --json` to confirm. Show the estimated settlement time from the order response as the expected arrival time. Respond in the user's language.
 
@@ -164,10 +164,10 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 
 "我想在72000卖出BTC"
 
-1. `okx-cex-market` `okx --profile live market ticker BTC-USDT`
-2. `okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000`
+1. `okx-cex-market` `okx market ticker BTC-USDT`
+2. `okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000`
    → explain CALL mechanics, show table, guide user to select term
-3. `okx --profile live earn dcd quote-and-buy --productId <id> --sz <sz> --notionalCcy BTC`
+3. `okx earn dcd quote-and-buy --productId <id> --sz <sz> --notionalCcy BTC`
 
 ---
 
@@ -176,13 +176,13 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 "帮我看看哪些币种可以自动赚币" / "开启 USDT 自动赚币"
 
 1. Run in parallel:
-   - `okx --profile live earn auto-earn status --json` → list currencies supporting auto-earn
-   - `okx --profile live account balance --json` → get available balance per currency
+   - `okx earn auto-earn status --json` → list currencies supporting auto-earn
+   - `okx account balance --json` → get available balance per currency
 2. Present as Markdown table, highlight currencies with `off` status that have available balance (from `account balance`)
 3. If user wants to enable:
    - Show confirmation with 24h restriction warning (see `autoearn-commands.md`)
-   - `okx --profile live earn auto-earn on <ccy>`
-   - `okx --profile live earn auto-earn status <ccy> --json` → verify status changed
+   - `okx earn auto-earn on <ccy>`
+   - `okx earn auto-earn status <ccy> --json` → verify status changed
 
 ---
 
@@ -190,11 +190,11 @@ This is the **only DCD WRITE operation requiring explicit user confirmation**.
 
 "关闭 SOL 自动赚币"
 
-1. `okx --profile live earn auto-earn status <ccy> --json` → verify currently enabled
+1. `okx earn auto-earn status <ccy> --json` → verify currently enabled
 2. Show confirmation (see `autoearn-commands.md`)
-3. `okx --profile live earn auto-earn off <ccy>`
+3. `okx earn auto-earn off <ccy>`
 4. If 24h error → parse timestamp, tell user when they can retry
-5. If success → `okx --profile live earn auto-earn status <ccy> --json` → verify
+5. If success → `okx earn auto-earn status <ccy> --json` → verify
 
 ---
 
@@ -206,11 +206,11 @@ Set up a recurring task (every 4 hours) that checks for available fixed-term off
 
 **Each cycle executes:**
 
-1. `okx --profile live earn savings rate-history --ccy <ccy> --json` → extract fixed-term offers (entries with `term` field); if no offers available or all `soldOut`, end cycle silently
+1. `okx earn savings rate-history --ccy <ccy> --json` → extract fixed-term offers (entries with `term` field); if no offers available or all `soldOut`, end cycle silently
 2. If offers exist, run in parallel:
-   - `okx --profile live account balance --json` → idle `<ccy>` in trading account
-   - `okx --profile live earn savings balance <ccy> --json` → current simple earn position and `lendingRate`
-   - `okx --profile live account asset-balance <ccy> --json` → idle `<ccy>` in funding account
+   - `okx account balance --json` → idle `<ccy>` in trading account
+   - `okx earn savings balance <ccy> --json` → current simple earn position and `lendingRate`
+   - `okx account asset-balance <ccy> --json` → idle `<ccy>` in funding account
 3. Compare APY:
    - Fixed-term `rate` vs simple earn `lendingRate` → if fixed-term rate > lendingRate, simple earn funds are candidates
    - Trading account idle `<ccy>` → always a candidate (earning 0%)
@@ -243,14 +243,14 @@ Set up a recurring task (every 4 hours) that checks for available fixed-term off
 
 6. Wait for user confirmation (amount, term selection)
 7. _(Optional — requires **Withdraw** permission on the API key)_
-   If funds are in trading account → `okx --profile live account transfer --ccy <ccy> --amt <amt> --from 18 --to 6` (trading→funding)
+   If funds are in trading account → `okx account transfer --ccy <ccy> --amt <amt> --from 18 --to 6` (trading→funding)
 
    If transfer fails with a permission error, inform the user that their API key does not have Withdraw permission and they should complete the transfer manually in the OKX app.
-8. If funds are in simple earn → `okx --profile live earn savings redeem --ccy <ccy> --amt <amt>` (redeem first, funds return to funding account)
-9. `okx --profile live earn savings fixed-purchase --ccy <ccy> --amt <amt> --term <term> --json` → preview
+8. If funds are in simple earn → `okx earn savings redeem --ccy <ccy> --amt <amt>` (redeem first, funds return to funding account)
+9. `okx earn savings fixed-purchase --ccy <ccy> --amt <amt> --term <term> --json` → preview
 10. Show fixed-term confirmation (see `savings-commands.md` Fixed-Term Confirmation Templates), wait for final confirmation
-11. `okx --profile live earn savings fixed-purchase --ccy <ccy> --amt <amt> --term <term> --confirm --json`
-12. `okx --profile live earn savings fixed-orders --ccy <ccy> --state pending --json` → verify order created
+11. `okx earn savings fixed-purchase --ccy <ccy> --amt <amt> --term <term> --confirm --json`
+12. `okx earn savings fixed-orders --ccy <ccy> --state pending --json` → verify order created
 
 **Setup via `/loop`:** `/loop 4h` then instruct to run this workflow each cycle.
 
@@ -264,7 +264,7 @@ Set up a recurring task (every 1 hour) that checks for flash earn projects and n
 
 **Each cycle executes:**
 
-1. `okx --profile live earn flash-earn projects --status 0,100 --json` → check for upcoming or in-progress projects
+1. `okx earn flash-earn projects --status 0,100 --json` → check for upcoming or in-progress projects
 2. If result is empty (`[]` or "No flash earn projects") → end cycle silently (**no output**)
 3. To avoid duplicate notifications, track previously notified project IDs within the loop session. Only notify for newly appeared projects — skip any project ID already notified in a prior cycle.
 4. If new projects exist, notify user:

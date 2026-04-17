@@ -5,10 +5,10 @@
 Query currencies that support auto-earn and their current status.
 
 ```bash
-okx --profile live earn auto-earn status              # all currencies
-okx --profile live earn auto-earn status USDT          # specific currency
-okx --profile live earn auto-earn status --ccy USDT    # --ccy flag form
-okx --profile live earn auto-earn status --json
+okx earn auto-earn status              # all currencies
+okx earn auto-earn status USDT          # specific currency
+okx earn auto-earn status --ccy USDT    # --ccy flag form
+okx earn auto-earn status --json
 ```
 
 Output fields: `ccy` · `earnType` (lend+stake or USDG earn) · `autoLend` (status) · `autoStaking` (status) · `invested` (amount in earn) · `matched` (matched amount) · `apr` (annual rate)
@@ -20,9 +20,9 @@ Output fields: `ccy` · `earnType` (lend+stake or USDG earn) · `autoLend` (stat
 Enable auto-earn for a currency. CLI auto-infers earnType — no manual input needed.
 
 ```bash
-okx --profile live earn auto-earn on USDT
-okx --profile live earn auto-earn on --ccy USDT
-okx --profile live earn auto-earn on USDG
+okx earn auto-earn on USDT
+okx earn auto-earn on --ccy USDT
+okx earn auto-earn on USDG
 ```
 
 | Parameter | Required | Description |
@@ -30,7 +30,7 @@ okx --profile live earn auto-earn on USDG
 | `CCY` (positional) or `--ccy` | Yes | Currency, e.g. USDT, SOL, USDG |
 
 **Pre-execution checklist:**
-1. `okx --profile live earn auto-earn status <ccy> --json` — verify currency supports auto-earn and is not already enabled
+1. `okx earn auto-earn status <ccy> --json` — verify currency supports auto-earn and is not already enabled
 2. Show confirmation summary (see [Confirmation Templates](#confirmation-templates))
 3. **Warn about 24h restriction** — once enabled, cannot disable for 24 hours
 4. Wait for user confirmation
@@ -42,8 +42,8 @@ okx --profile live earn auto-earn on USDG
 Disable auto-earn for a currency. **Will fail if enabled less than 24 hours ago.**
 
 ```bash
-okx --profile live earn auto-earn off USDT
-okx --profile live earn auto-earn off --ccy USDT
+okx earn auto-earn off USDT
+okx earn auto-earn off --ccy USDT
 ```
 
 | Parameter | Required | Description |
@@ -51,7 +51,7 @@ okx --profile live earn auto-earn off --ccy USDT
 | `CCY` (positional) or `--ccy` | Yes | Currency to disable |
 
 **Pre-execution checklist:**
-1. `okx --profile live earn auto-earn status <ccy> --json` — verify auto-earn is currently enabled
+1. `okx earn auto-earn status <ccy> --json` — verify auto-earn is currently enabled
 2. Show confirmation summary
 3. Mention 24h restriction — if user just recently enabled, the operation may fail
 4. Wait for user confirmation

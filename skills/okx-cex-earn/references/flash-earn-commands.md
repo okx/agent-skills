@@ -5,11 +5,11 @@
 Browse upcoming or in-progress Flash Earn projects.
 
 ```bash
-okx --profile live earn flash-earn projects                  # all (upcoming + in-progress)
-okx --profile live earn flash-earn projects --status 0       # upcoming only
-okx --profile live earn flash-earn projects --status 100     # in-progress only
-okx --profile live earn flash-earn projects --status 0,100   # both (explicit)
-okx --profile live earn flash-earn projects --json
+okx earn flash-earn projects                  # all (upcoming + in-progress)
+okx earn flash-earn projects --status 0       # upcoming only
+okx earn flash-earn projects --status 100     # in-progress only
+okx earn flash-earn projects --status 0,100   # both (explicit)
+okx earn flash-earn projects --json
 ```
 
 | Parameter | Required | Description |

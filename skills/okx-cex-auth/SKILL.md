@@ -58,6 +58,17 @@ Parse the output. Locate `profiles[<default_profile>]`. Look at `api_key`:
 
 ### §A — No API key → OAuth device flow
 
+**MANDATORY.** When `api_key` is `(not set)`, the ONLY correct next action is to run OAuth. Do not offer alternatives.
+
+**HARD PROHIBITIONS in §A:**
+- DO NOT suggest the user create `~/.okx/config.toml` manually.
+- DO NOT suggest API key setup as an option ("Option 1 / Option 2" framing is forbidden).
+- DO NOT ask the user to choose between API key and OAuth. They have no API key; there is no choice.
+- DO NOT explain both paths. Only describe what you are doing now (OAuth).
+- DO NOT proactively mention API keys at all in this path.
+
+If the user later explicitly says "I want to use API key instead", then stop §A and let them configure it themselves — but you must NEVER initiate that suggestion.
+
 1. Run the login command (non-blocking):
 
    ```bash

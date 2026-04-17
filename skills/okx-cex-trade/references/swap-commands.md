@@ -6,10 +6,10 @@
 okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
   --tdMode <cross|isolated> \
   [--tgtCcy <base_ccy|quote_ccy|margin>] \
-  [--posSide <long|short>] [--px <price>] \
+  [--posSide <long|short>] [--px <price>] [--reduceOnly] \
   [--tpTriggerPx <p>] [--tpOrdPx=<p|-1>] \
   [--slTriggerPx <p>] [--slOrdPx=<p|-1>] \
-  [--json]
+  [--clOrdId <id>] [--json]
 ```
 
 | Param | Required | Default | Description |
@@ -22,18 +22,22 @@ okx swap place --instId <id> --side <buy|sell> --ordType <type> --sz <n> \
 | `--tgtCcy` | No | base_ccy | `base_ccy`: sz in contracts; `quote_ccy`: sz in USDT notional value; `margin`: sz in USDT margin cost (position = sz * leverage) |
 | `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
 | `--px` | Cond. | - | Price — required for limit orders |
+| `--reduceOnly` | No | false | Close-only; will not open a new position if one doesn't exist |
 | `--tpTriggerPx` | No | - | Attached take-profit trigger price |
 | `--tpOrdPx` | No | - | TP order price; use `-1` for market execution (must use `=` form: `--tpOrdPx=-1`) |
 | `--slTriggerPx` | No | - | Attached stop-loss trigger price |
 | `--slOrdPx` | No | - | SL order price; use `-1` for market execution (must use `=` form: `--slOrdPx=-1`) |
+| `--clOrdId` | No | - | Client-assigned order ID (max 32 chars alphanumeric + `-` `_`) |
 
 ---
 
 ## Swap — Cancel Order
 
 ```bash
-okx swap cancel --instId <id> --ordId <id> [--json]
+okx swap cancel --instId <id> [--ordId <id>] [--clOrdId <id>] [--json]
 ```
+
+At least one of `--ordId` or `--clOrdId` is required.
 
 ---
 
@@ -98,6 +102,7 @@ Returns table: `instId`, `mgnMode`, `posSide`, `lever`.
 okx swap algo place --instId <id> --side <buy|sell> \
   --ordType <oco|conditional|move_order_stop> --sz <n> \
   --tdMode <cross|isolated> \
+  [--clOrdId <id>] \
   [--tgtCcy <base_ccy|quote_ccy|margin>] \
   [--posSide <long|short>] [--reduceOnly] \
   [--tpTriggerPx <p>] [--tpOrdPx=<p|-1>] \
@@ -113,6 +118,7 @@ okx swap algo place --instId <id> --side <buy|sell> \
 | `--ordType` | Yes | - | `oco`, `conditional`, or `move_order_stop` |
 | `--sz` | Yes | - | Number of contracts |
 | `--tdMode` | Yes | - | `cross` or `isolated` |
+| `--clOrdId` | No | - | Client-assigned algo order ID (max 32 chars alphanumeric + `-` `_`) |
 | `--tgtCcy` | No | base_ccy | `base_ccy`: sz in contracts; `quote_ccy`: sz in USDT notional value; `margin`: sz in USDT margin cost (position = sz * leverage) |
 | `--posSide` | Cond. | - | `long` or `short` — required in hedge mode |
 | `--reduceOnly` | No | false | Close-only; will not open a new position if one doesn't exist |
@@ -168,6 +174,8 @@ okx swap algo amend --instId <id> --algoId <id> \
   [--newSz <n>] [--newTpTriggerPx <p>] [--newTpOrdPx <p>] \
   [--newSlTriggerPx <p>] [--newSlOrdPx <p>] [--json]
 ```
+
+> **Note**: Use this to modify TP/SL orders attached when placing the main order. Run `okx swap algo orders` first to find the `algoId`.
 
 ---
 
@@ -232,7 +240,7 @@ okx swap algo orders [--instId <id>] [--history] [--ordType <type>] [--json]
 - **posSide**: required in hedge mode (`long_short_mode`); omit in net mode. Check `okx account config` for `posMode`
 - **tdMode**: use `cross` for cross-margin, `isolated` for isolated margin
 - **Close position**: `swap close` closes the **entire** position; to partial close, use `swap place` with a reduce-only algo
-- **Leverage**: max leverage varies by instrument and account level; exchange rejects if exceeded
+- **Leverage**: max leverage varies by instrument and account level; exchange rejects if exceeded. **If set-leverage fails with "Cancel cross-margin TP/SL … or stop bots"**: this means pending algo orders or active trading bots exist on that instrument under cross margin. Troubleshoot in order: (1) `okx swap algo-orders --instId <id> --status pending` — check for TP/SL, trailing, trigger, chase orders (most common cause); (2) only if no algo orders found, check bots: `okx bot grid-orders --type contract_grid --status active`. **Never automatically cancel algo orders or stop bots** — show findings to the user and let them decide which to cancel/stop
 - **Trailing stop**: use either `--callbackRatio` (relative, e.g., `0.02`) or `--callbackSpread` (absolute price), not both
 - **Algo on close side**: always set `--side` opposite to position (e.g., long position → sell algo)
 - **Stock tokens (instCategory=3)**: instruments like `TSLA-USDT-SWAP`, `NVDA-USDT-SWAP` follow the same linear SWAP flow (USDT-margined, sz in contracts). Key differences: (1) max leverage **5x** — check with `swap get-leverage` before placing, set with `swap leverage --lever <n≤5>`; (2) `--posSide` is always required; (3) trading restricted to stock market hours (US stocks: Mon–Fri ~09:30–16:00 ET) — confirm live ticker before placing. Use `okx market stock-tokens` to list available instruments

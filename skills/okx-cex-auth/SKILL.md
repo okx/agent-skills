@@ -69,9 +69,24 @@ Parse the output. Locate `profiles[<default_profile>]`. Look at `api_key`:
 
 If the user later explicitly says "I want to use API key instead", then stop §A and let them configure it themselves — but you must NEVER initiate that suggestion.
 
-#### §A.1 — Ask site first (MANDATORY)
+#### §A.1 — Start login; CLI decides whether to ask for site
 
-Before running any login command, ask the user to pick a site. Output this message EXACTLY (do not rephrase, do not translate, do not add extra text):
+First attempt (let CLI inherit persisted site if any):
+
+```bash
+okx auth login --manual
+```
+
+Inspect the output:
+
+**Case A — First-time login.** stderr contains:
+
+```
+No site configured. Let's set one up for OAuth login.
+Error: Site selection: IO error: not a terminal
+```
+
+CLI has no persisted site. Output this message EXACTLY (do not rephrase, do not translate, do not add extra text):
 
 ```
 您需要选择 OKX 站点：
@@ -83,7 +98,7 @@ Before running any login command, ask the user to pick a site. Output this messa
 请告诉我您要选择哪个站点（1、2 或 3）。
 ```
 
-Wait for the user's reply. Map the reply to a `--site` value (do NOT pick a default on empty reply — ask again instead):
+Wait for the user's reply. Map to a `--site` value (do NOT pick a default on empty reply — ask again instead):
 
 | User reply     | `--site` value |
 | -------------- | -------------- |
@@ -92,13 +107,15 @@ Wait for the user's reply. Map the reply to a `--site` value (do NOT pick a defa
 | `3` / `us`     | `us`           |
 | empty / other  | ask again      |
 
-#### §A.2 — Run login with the chosen site
+Re-run with the chosen site:
 
 ```bash
 okx auth login --manual --site <selected>
 ```
 
-Non-blocking. Exits immediately with a JSON payload.
+CLI persists the choice into `~/.okx/config.toml`. Subsequent logins inherit silently.
+
+**Case B — Returning login.** stdout contains JSON `{"verificationUri":..., "userCode":...}`. CLI inherited the last site from config.toml. Proceed to §A.3 — do NOT re-ask for site.
 
 #### §A.3 — Surface the URL and code
 
@@ -130,6 +147,26 @@ Read the `status` field:
 | `not_logged_in` | Device code expired. Ask the user if they want to retry (§A.1) |
 
 **Do not run any other `okx` command while polling.**
+
+#### §A.5 — Switch site (user explicitly requests)
+
+Trigger ONLY when the user explicitly asks to change site (e.g. "换站点", "switch site", "换到 EEA"). Do NOT trigger automatically based on any other signal.
+
+1. Logout (clears tokens; `config.toml` site preserved, will be overwritten next):
+
+```bash
+okx auth logout
+```
+
+2. Ask the user for the new site — output the EXACT message from §A.1 Case A.
+
+3. Re-login with explicit `--site` to overwrite the persisted choice:
+
+```bash
+okx auth login --manual --site <new>
+```
+
+CLI updates `~/.okx/config.toml` automatically. No file cleanup required.
 
 ### §B — API key configured → fix the key, never switch to OAuth
 

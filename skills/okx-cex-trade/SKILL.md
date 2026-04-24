@@ -1,6 +1,6 @@
 ---
 name: okx-cex-trade
-description: "This skill should be used when the user asks to 'buy BTC', 'sell ETH', 'place a limit order', 'place a market order', 'cancel my order', 'amend my order', 'long BTC perp', 'short ETH swap', 'open a position', 'close a position', 'set take profit', 'set stop loss', 'add a trailing stop', 'set leverage', 'check my orders', 'order status', 'fill history', 'trade history', 'buy a call', 'sell a put', 'buy call option', 'sell put option', 'option chain', 'implied volatility', 'IV', 'option Greeks', 'delta', 'gamma', 'theta', 'vega', 'delta hedge', 'option order', 'option position', 'option fills', 'event contract', 'buy Yes', 'buy No', 'buy Up', 'buy Down', 'BTC above', 'price above', '15min price', 'prediction market', or any request to place/cancel/amend spot, perpetual swap, delivery futures, options, or event contract orders on OKX CEX. Covers spot trading, swap/perpetual contracts, delivery futures, options (calls/puts, Greeks, IV), event contracts (binary Yes/No or Up/Down outcomes), and conditional (TP/SL/trailing) algo orders. Requires API credentials. Do NOT use for market data (use okx-cex-market), account balance/positions (use okx-cex-portfolio), or grid/DCA bots (use okx-cex-bot)."
+description: "This skill should be used when the user asks to 'buy BTC', 'sell ETH', 'place a limit order', 'place a market order', 'cancel my order', 'amend my order', 'long BTC perp', 'short ETH swap', 'open a position', 'close a position', 'set take profit', 'set stop loss', 'add a trailing stop', 'set leverage', 'check my orders', 'order status', 'fill history', 'trade history', 'buy a call', 'sell a put', 'buy call option', 'sell put option', 'option chain', 'implied volatility', 'IV', 'option Greeks', 'delta', 'gamma', 'theta', 'vega', 'delta hedge', 'option order', 'option position', 'option fills', 'event contract', 'buy Yes', 'buy No', 'buy Up', 'buy Down', 'BTC above', 'price above', '15min price', 'prediction market', 'browse event contracts', 'what event contracts are available', 'show event contracts', 'list event contracts', 'active event contracts', 'available prediction markets', 'how many event contracts', or any request to browse, place, cancel, or amend spot, perpetual swap, delivery futures, options, or event contract orders on OKX CEX. Covers spot trading, swap/perpetual contracts, delivery futures, options (calls/puts, Greeks, IV), event contracts (browsing available markets AND binary Yes/No or Up/Down trading), and conditional (TP/SL/trailing) algo orders. Requires API credentials. Do NOT use for market data (use okx-cex-market), account balance/positions (use okx-cex-portfolio), or grid/DCA bots (use okx-cex-bot)."
 license: MIT
 metadata:
   author: okx
@@ -21,6 +21,8 @@ metadata:
 
 Spot, perpetual swap, delivery futures, **options**, and **event contract** order management on OKX exchange. Place, cancel, amend, and monitor orders; query option chains and Greeks; trade binary outcome event contracts (Yes/No, Up/Down); set take-profit/stop-loss and trailing stops; manage leverage and positions. **Requires API credentials.**
 
+> **CLI vs MCP tool names** — Subcommands use spaces (`okx swap algo place`, `okx bot grid create`), not hyphens. Do NOT convert an MCP tool identifier (`swap_place_algo_order`) into a hyphen-joined CLI command (`okx swap place-algo`) — that will be rejected with "Unknown command". Per-module mapping tables live in `references/<module>-commands.md`.
+
 ## Preflight
 
 Before running any command, follow [`../_shared/preflight.md`](../_shared/preflight.md).
@@ -34,82 +36,77 @@ Use `metadata.version` from this file's frontmatter as the reference for Step 2.
    ```
 2. Configure credentials:
    ```bash
-   okx config init
-   ```
-   Or set environment variables:
-   ```bash
-   export OKX_API_KEY=your_key
-   export OKX_SECRET_KEY=your_secret
-   export OKX_PASSPHRASE=your_passphrase
+   okx config init   # select site -> follow browser OAuth flow
    ```
 3. Test with demo mode (simulated trading, no real funds):
    ```bash
-   okx --profile demo spot orders
+   okx --demo spot orders
    ```
+
+> **Security**: NEVER accept credentials in chat. Guide users to `okx config init` for setup.
 
 ## Credential & Profile Check
 
-**Run this check before any authenticated command.**
+**Run this check before any authenticated command.** The auth method is detected during [preflight](../_shared/preflight.md) Step 2 and remembered for the session.
 
 ### Step A — Verify credentials
 
 ```bash
-okx config show       # verify configuration status (output is masked)
+okx auth status --json
 ```
 
-- If the command returns an error or shows no configuration: **stop all operations**, guide the user to run `okx config init`, and wait for setup to complete before retrying.
-- If credentials are configured: proceed to Step B.
+- `"apiKey": true` — **API Key mode**. Proceed to Step B.
+- `"status": "logged_in"` (no `apiKey`) — **OAuth mode**. Proceed to Step B.
+- `"status": "not_logged_in"` (no `apiKey`) — **stop all operations**, load `okx-cex-auth` skill and follow login steps, wait for completion.
+- `"status": "pending"` — login is in progress, wait for it to complete.
 
-### Step B — Confirm profile (required)
-
-`--profile` is **required** for all authenticated commands. Never add a profile implicitly.
-
-| Value | Mode | Funds |
-|---|---|---|
-| `live` | 实盘 | Real funds |
-| `demo` | 模拟盘 | Simulated funds |
+### Step B — Confirm trading mode
 
 **Resolution rules:**
-1. Current message intent is clear (e.g. "real" / "实盘" / "live" → `live`; "test" / "模拟" / "demo" → `demo`) → use it and inform the user: `"Using --profile live (实盘)"` or `"Using --profile demo (模拟盘)"`
-2. Current message has no explicit declaration → check conversation context for a previous profile:
-   - Found → use it, inform user: `"Continuing with --profile live (实盘) from earlier"`
+1. Current message intent is clear (e.g. "real" / "实盘" / "live" → live; "test" / "模拟" / "demo" → demo) → use it and inform the user
+2. Current message has no explicit declaration → check conversation context for a previous choice:
+   - Found → reuse it, inform user
    - Not found → ask: `"Live (实盘) or Demo (模拟盘)?"` — wait for answer before proceeding
 
-### Handling 401 Authentication Errors
+**How to apply the mode depends on auth method (detected in Step A):**
 
-If any command returns a 401 / authentication error:
+| Auth method | Live (实盘) | Demo (模拟盘) |
+|---|---|---|
+| **API Key** | `--profile <live-profile>` | `--profile <demo-profile>` |
+| **OAuth** | *(no flag needed, live is default)* | `--demo` |
+
+- **API Key users**: run `okx config show --json` to discover available profile names and their `demo` settings. Use `--profile <name>` to select the correct one.
+- **OAuth users**: omit flags for live trading; add `--demo` for simulated trading. Do **not** use `--profile` to switch modes.
+
+### Handling Authentication Errors
+
+**Authentication error** (error contains "401", "Session expired", or "Run `okx auth login` first"):
 1. **Stop immediately** — do not retry the same command
-2. Inform the user: "Authentication failed (401). Your API credentials may be invalid or expired."
-3. Guide the user to update credentials by editing the file directly with their local editor:
-   ```
-   ~/.okx/config.toml
-   ```
-   Update the fields `api_key`, `secret_key`, `passphrase` under the relevant profile.
-   Do NOT paste the new credentials into chat.
-4. After the user confirms the file is updated, run `okx config show` to verify (output is masked)
-5. Only then retry the original operation
+2. Inform the user: "Authentication failed. Your session may have expired."
+3. Load `okx-cex-auth` skill and follow the re-authentication steps
+4. After successful re-authentication, retry the original command
 
 ## Demo vs Live Mode
 
-Profile is the single control for 实盘/模拟盘 switching:
-
-| `--profile` | Mode | Funds |
-|---|---|---|
-| `live` | 实盘 | Real money — irreversible |
-| `demo` | 模拟盘 | Simulated — no real funds |
+| Mode | Funds | API Key param | OAuth param |
+|---|---|---|---|
+| 实盘 (live) | Real money — irreversible | `--profile <live-profile>` | *(default, no flag)* |
+| 模拟盘 (demo) | Simulated — no real funds | `--profile <demo-profile>` | `--demo` |
 
 **Rules:**
-1. `--profile` is **required** on every authenticated command — determined in "Credential & Profile Check" Step B
-2. Every response after a command must append: `[profile: live]` or `[profile: demo]`
-3. Do **not** use the `--demo` flag for mode switching — use `--profile` instead
+1. Trading mode is **required** on every authenticated command — determined in "Credential & Profile Check" Step B
+2. Every response after a command must append: `[mode: live]` or `[mode: demo]`
 
 ## Skill Routing
 
 - For market data (prices, charts, depth, funding rates) → use `okx-cex-market`
 - For account balance, P&L, positions, fees, transfers → use `okx-cex-portfolio`
 - For regular spot/swap/futures/options/algo orders → use `okx-cex-trade` (this skill)
-- For event contracts (prediction markets, binary outcomes) → use `okx-cex-trade` (this skill)
+- For **browsing/discovering** event contracts (what's available, how many, list active) → use `okx-cex-trade` with `okx event browse` / `okx event series`
+- For **trading** event contracts (place/cancel/amend prediction market orders) → use `okx-cex-trade` with `okx event place` / `okx event cancel` / `okx event amend`
 - For grid and DCA trading bots → use `okx-cex-bot`
+
+> **Important**: When user asks about "contracts" in the context of event contracts or prediction markets, route to this skill — NOT to `okx-cex-portfolio`. Portfolio does not handle event contracts — it covers account balance, positions, P&L, and transfers only.
 
 ## Sz Handling for Derivatives
 
@@ -223,7 +220,7 @@ okx event place --instId BTC-ABOVE-DAILY-260224-1600-70000 --side buy --outcome 
 
 ## Command Index
 
-### Spot Orders (11 commands)
+### Spot Orders (12 commands)
 
 | # | Command | Type | Description |
 |---|---|---|---|
@@ -238,6 +235,7 @@ okx event place --instId BTC-ABOVE-DAILY-260224-1600-70000 --side buy --outcome 
 | 9 | `okx spot get` | READ | Single spot order details |
 | 10 | `okx spot fills` | READ | Spot trade fill history |
 | 11 | `okx spot algo orders` | READ | List spot TP/SL algo orders |
+| 12 | `okx spot leverage` | WRITE | Set leverage for spot **margin** (borrowing). Pair-level (`--instId`) or currency-level cross (`--ccy`, required for borrow-enabled / multi-ccy / portfolio margin) |
 
 For full command syntax, parameter tables, and edge cases, read `{baseDir}/references/spot-commands.md`.
 
@@ -245,21 +243,21 @@ For full command syntax, parameter tables, and edge cases, read `{baseDir}/refer
 
 | # | Command | Type | Description |
 |---|---|---|---|
-| 12 | `okx swap place` | WRITE | Place perpetual swap order |
-| 13 | `okx swap cancel` | WRITE | Cancel swap order |
-| 14 | `okx swap amend` | WRITE | Amend swap order price or size |
-| 15 | `okx swap close` | WRITE | Close entire position at market |
-| 16 | `okx swap leverage` | WRITE | Set leverage for an instrument |
-| 17 | `okx swap algo place` | WRITE | Place swap TP/SL algo order |
-| 18 | `okx swap algo trail` | WRITE | Place swap trailing stop order |
-| 19 | `okx swap algo amend` | WRITE | Amend swap algo order |
-| 20 | `okx swap algo cancel` | WRITE | Cancel swap algo order |
-| 21 | `okx swap positions` | READ | Open perpetual swap positions |
-| 22 | `okx swap orders` | READ | List open or historical swap orders |
-| 23 | `okx swap get` | READ | Single swap order details |
-| 24 | `okx swap fills` | READ | Swap trade fill history |
-| 25 | `okx swap get-leverage` | READ | Current leverage settings |
-| 26 | `okx swap algo orders` | READ | List swap algo orders |
+| 13 | `okx swap place` | WRITE | Place perpetual swap order |
+| 14 | `okx swap cancel` | WRITE | Cancel swap order |
+| 15 | `okx swap amend` | WRITE | Amend swap order price or size |
+| 16 | `okx swap close` | WRITE | Close entire position at market |
+| 17 | `okx swap leverage` | WRITE | Set leverage for an instrument |
+| 18 | `okx swap algo place` | WRITE | Place swap TP/SL algo order |
+| 19 | `okx swap algo trail` | WRITE | Place swap trailing stop order |
+| 20 | `okx swap algo amend` | WRITE | Amend swap algo order |
+| 21 | `okx swap algo cancel` | WRITE | Cancel swap algo order |
+| 22 | `okx swap positions` | READ | Open perpetual swap positions |
+| 23 | `okx swap orders` | READ | List open or historical swap orders |
+| 24 | `okx swap get` | READ | Single swap order details |
+| 25 | `okx swap fills` | READ | Swap trade fill history |
+| 26 | `okx swap get-leverage` | READ | Current leverage settings |
+| 27 | `okx swap algo orders` | READ | List swap algo orders |
 
 For full command syntax, parameter tables, and edge cases, read `{baseDir}/references/swap-commands.md`.
 
@@ -267,21 +265,21 @@ For full command syntax, parameter tables, and edge cases, read `{baseDir}/refer
 
 | # | Command | Type | Description |
 |---|---|---|---|
-| 27 | `okx futures place` | WRITE | Place delivery futures order |
-| 28 | `okx futures cancel` | WRITE | Cancel delivery futures order |
-| 29 | `okx futures amend` | WRITE | Amend delivery futures order price or size |
-| 30 | `okx futures close` | WRITE | Close entire futures position at market |
-| 31 | `okx futures leverage` | WRITE | Set leverage for a futures instrument |
-| 32 | `okx futures algo place` | WRITE | Place futures TP/SL algo order |
-| 33 | `okx futures algo trail` | WRITE | Place futures trailing stop order |
-| 34 | `okx futures algo amend` | WRITE | Amend futures algo order |
-| 35 | `okx futures algo cancel` | WRITE | Cancel futures algo order |
-| 36 | `okx futures orders` | READ | List delivery futures orders |
-| 37 | `okx futures positions` | READ | Open delivery futures positions |
-| 38 | `okx futures fills` | READ | Delivery futures fill history |
-| 39 | `okx futures get` | READ | Single delivery futures order details |
-| 40 | `okx futures get-leverage` | READ | Current futures leverage settings |
-| 41 | `okx futures algo orders` | READ | List futures algo orders |
+| 28 | `okx futures place` | WRITE | Place delivery futures order |
+| 29 | `okx futures cancel` | WRITE | Cancel delivery futures order |
+| 30 | `okx futures amend` | WRITE | Amend delivery futures order price or size |
+| 31 | `okx futures close` | WRITE | Close entire futures position at market |
+| 32 | `okx futures leverage` | WRITE | Set leverage for a futures instrument |
+| 33 | `okx futures algo place` | WRITE | Place futures TP/SL algo order |
+| 34 | `okx futures algo trail` | WRITE | Place futures trailing stop order |
+| 35 | `okx futures algo amend` | WRITE | Amend futures algo order |
+| 36 | `okx futures algo cancel` | WRITE | Cancel futures algo order |
+| 37 | `okx futures orders` | READ | List delivery futures orders |
+| 38 | `okx futures positions` | READ | Open delivery futures positions |
+| 39 | `okx futures fills` | READ | Delivery futures fill history |
+| 40 | `okx futures get` | READ | Single delivery futures order details |
+| 41 | `okx futures get-leverage` | READ | Current futures leverage settings |
+| 42 | `okx futures algo orders` | READ | List futures algo orders |
 
 For full command syntax, parameter tables, and edge cases, read `{baseDir}/references/futures-commands.md`.
 
@@ -289,16 +287,16 @@ For full command syntax, parameter tables, and edge cases, read `{baseDir}/refer
 
 | # | Command | Type | Description |
 |---|---|---|---|
-| 42 | `okx option instruments` | READ | Option chain: list available contracts for an underlying |
-| 43 | `okx option greeks` | READ | Implied volatility + Greeks (delta/gamma/theta/vega) by underlying |
-| 44 | `okx option place` | WRITE | Place option order (call or put, buyer or seller) |
-| 45 | `okx option cancel` | WRITE | Cancel unfilled option order |
-| 46 | `okx option amend` | WRITE | Amend option order price or size |
-| 47 | `okx option batch-cancel` | WRITE | Batch cancel up to 20 option orders |
-| 48 | `okx option orders` | READ | List option orders (live / history / archive) |
-| 49 | `okx option get` | READ | Single option order details |
-| 50 | `okx option positions` | READ | Open option positions with live Greeks |
-| 51 | `okx option fills` | READ | Option trade fill history |
+| 43 | `okx option instruments` | READ | Option chain: list available contracts for an underlying |
+| 44 | `okx option greeks` | READ | Implied volatility + Greeks (delta/gamma/theta/vega) by underlying |
+| 45 | `okx option place` | WRITE | Place option order (call or put, buyer or seller) |
+| 46 | `okx option cancel` | WRITE | Cancel unfilled option order |
+| 47 | `okx option amend` | WRITE | Amend option order price or size |
+| 48 | `okx option batch-cancel` | WRITE | Batch cancel up to 20 option orders |
+| 49 | `okx option orders` | READ | List option orders (live / history / archive) |
+| 50 | `okx option get` | READ | Single option order details |
+| 51 | `okx option positions` | READ | Open option positions with live Greeks |
+| 52 | `okx option fills` | READ | Option trade fill history |
 
 For full command syntax, USDT-to-contracts conversion formula, tdMode rules, and edge cases, read `{baseDir}/references/options-commands.md`.
 
@@ -306,15 +304,15 @@ For full command syntax, USDT-to-contracts conversion formula, tdMode rules, and
 
 | # | Command | Type | Description |
 |---|---|---|---|
-| 52 | `okx event browse` | READ | Browse active event contracts grouped by type (series + live markets in one call) |
-| 53 | `okx event series` | READ | List event series (e.g. BTC-ABOVE-DAILY, BTC-UPDOWN-15MIN) |
-| 54 | `okx event events <seriesId>` | READ | List events in a series |
-| 55 | `okx event markets <seriesId>` | READ | List markets; expired includes Outcome and Settlement value |
-| 56 | `okx event place ...` | WRITE | Place event order (outcome required) |
-| 57 | `okx event amend <instId> <ordId>` | WRITE | Amend event order (price/size) |
-| 58 | `okx event cancel <instId> <ordId>` | WRITE | Cancel event order |
-| 59 | `okx event orders` | READ | Pending or historical orders |
-| 60 | `okx event fills` | READ | Fill history |
+| 53 | `okx event browse` | READ | Browse active event contracts grouped by type (series + live markets in one call) |
+| 54 | `okx event series` | READ | List event series (e.g. BTC-ABOVE-DAILY, BTC-UPDOWN-15MIN) |
+| 55 | `okx event events <seriesId>` | READ | List events in a series |
+| 56 | `okx event markets <seriesId>` | READ | List markets; expired includes Outcome and Settlement value |
+| 57 | `okx event place ...` | WRITE | Place event order (outcome required) |
+| 58 | `okx event amend <instId> <ordId>` | WRITE | Amend event order (price/size) |
+| 59 | `okx event cancel <instId> <ordId>` | WRITE | Cancel event order |
+| 60 | `okx event orders` | READ | Pending or historical orders |
+| 61 | `okx event fills` | READ | Fill history |
 
 For full command syntax, parameter tables, and edge cases, read `{baseDir}/references/event-commands.md`.
 
@@ -322,9 +320,9 @@ For full command syntax, parameter tables, and edge cases, read `{baseDir}/refer
 
 ### Step 0 — Credential & Profile Check
 
-Before any authenticated command: see [Credential & Profile Check](#credential--profile-check). Determine profile (`live` or `demo`) before executing.
+Before any authenticated command: see [Credential & Profile Check](#credential--profile-check). Determine auth method and trading mode before executing.
 
-After every command result: append `[profile: live]` or `[profile: demo]`.
+After every command result: append `[mode: live]` or `[mode: demo]`.
 
 ### Step 1 — Identify instrument type and action
 
@@ -401,7 +399,7 @@ For cross-skill workflows and step-by-step examples, read `{baseDir}/references/
 - Option place: confirm `--instId`, `--side`, `--sz`, `--tdMode` (and `--tgtCcy quote_ccy` or `--tgtCcy margin` if USDT amount — system auto-converts); do NOT attach TP/SL
 - Event Contract place: confirm `--instId`, `--side`, `--outcome`, `--sz`, `--ordType`; for market orders sz is quote currency amount, for limit orders sz is number of contracts + `--px` required
 - Swap/Futures close: confirm `--instId`, `--mgnMode`, `--posSide`
-- Leverage: confirm new leverage and impact on existing positions. **If set-leverage fails** (error mentions "cancel orders or stop bots"): troubleshoot in priority order — (1) query pending algo orders first (`swap/futures algo-orders --status pending`), as this is the most common blocker; (2) only if no algo orders, check active bots (`bot grid-orders`). **Do NOT automatically cancel orders or stop bots** — present findings and let the user decide
+- Leverage: confirm new leverage and impact on existing positions. **Pre-checks to avoid common 400s**: (a) `--lever` must be a positive number within the instrument's max (see `okx market instruments` → `lever`); (b) for `--mgnMode isolated` in hedge pos mode, `--posSide` is required — each side (`long`, `short`) must be set **separately**, setting one does NOT auto-apply to the other; (c) **portfolio-margin accounts cannot adjust `cross` leverage for SWAP/FUTURES** — OKX will reject; if unsure, run `okx account config` and check `acctLv` first. **If set-leverage fails** (error mentions "cancel orders or stop bots"): troubleshoot in priority order — (1) query pending algo orders first (`swap/futures algo-orders --status pending`), as this is the most common blocker; (2) only if no algo orders, check active bots (`bot grid-orders`). **Do NOT automatically cancel orders or stop bots** — present findings and let the user decide
 - Algo place (TP/SL): confirm trigger prices; use `--tpOrdPx=-1` for market execution
 - Algo trail: confirm `--callbackRatio` (e.g., `0.02` = 2%) or `--callbackSpread`
 
@@ -440,8 +438,8 @@ This applies to all error codes whose messages suggest destructive actions, incl
 
 ## Global Notes
 
-- All write commands require valid credentials in `~/.okx/config.toml` or env vars
-- `--profile <name>` is required for all authenticated commands
+- All write commands require valid credentials (OAuth session or API key in `~/.okx/config.toml`)
+- Auth method and trading mode are determined in "Credential & Profile Check"; see that section for parameter rules
 - `--json` returns the raw OKX API v5 response by default. Add `--env` to wrap the output as `{"env": "<live|demo>", "profile": "<name>", "data": <response>}` — useful when you need to know the active environment and credential profile
 - Rate limit: 60 order operations per 2 seconds per UID
 - Batch operations (batch cancel, batch amend) are available via MCP tools directly if needed

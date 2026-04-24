@@ -1,6 +1,6 @@
 ---
 name: okx-cex-portfolio
-description: "This skill should be used when the user asks about 'account balance', 'how much USDT do I have', 'my funding account', 'show my positions', 'open positions', 'position P&L', 'unrealized PnL', 'closed positions', 'position history', 'realized PnL', 'account bills', 'transaction history', 'trading fees', 'fee tier', 'account config', 'max order size', 'how much can I buy', 'withdrawable amount', 'transfer funds', 'move USDT to trading account', or 'switch position mode'. Requires API credentials. Do NOT use for market prices (use okx-cex-market), placing/cancelling orders (use okx-cex-trade), or grid/DCA bots (use okx-cex-bot)."
+description: "This skill should be used when the user asks about 'account balance', 'how much USDT do I have', 'my funding account', 'show my positions', 'open positions', 'position P&L', 'unrealized PnL', 'closed positions', 'position history', 'realized PnL', 'account bills', 'transaction history', 'trading fees', 'fee tier', 'account config', 'max order size', 'how much can I buy', 'withdrawable amount', 'transfer funds', 'move USDT to trading account', or 'switch position mode'. Also use for '总资产', 'full balance', 'all assets', 'total holdings', 'net worth', 'how much do I have in total', 'show all my balances', 'all account balances', 'asset overview'. Requires API credentials. Do NOT use for market prices (use okx-cex-market), placing/cancelling orders (use okx-cex-trade), or grid/DCA bots (use okx-cex-bot)."
 license: MIT
 metadata:
   author: okx
@@ -34,80 +34,77 @@ Use `metadata.version` from this file's frontmatter as the reference for Step 2.
    ```
 2. Configure credentials:
    ```bash
-   okx config init
+   okx config init   # select site -> follow browser OAuth flow
    ```
-   Or set environment variables:
+3. Test with demo mode (simulated trading, no real funds):
    ```bash
-   export OKX_API_KEY=your_key
-   export OKX_SECRET_KEY=your_secret
-   export OKX_PASSPHRASE=your_passphrase
+   okx --demo account balance
    ```
-3. Test with demo mode:
-   ```bash
-   okx --profile demo account balance
-   ```
+
+> **Security**: NEVER accept credentials in chat. Guide users to `okx config init` for setup.
 
 ## Credential & Profile Check
 
-**Run this check before any authenticated command.**
+**Run this check before any authenticated command.** The auth method is detected during [preflight](../_shared/preflight.md) Step 2 and remembered for the session.
 
 ### Step A — Verify credentials
 
 ```bash
-okx config show       # verify configuration status (output is masked)
+okx auth status --json
 ```
 
-- If the command returns an error or shows no configuration: **stop all operations**, guide the user to run `okx config init`, and wait for setup to complete before retrying.
-- If credentials are configured: proceed to Step B.
+- `"apiKey": true` — **API Key mode**. Proceed to Step B.
+- `"status": "logged_in"` (no `apiKey`) — **OAuth mode**. Proceed to Step B.
+- `"status": "not_logged_in"` (no `apiKey`) — **stop all operations**, load `okx-cex-auth` skill and follow login steps, wait for completion.
+- `"status": "pending"` — login is in progress, wait for it to complete.
 
-### Step B — Confirm profile (required)
-
-`--profile` is **required** for all authenticated commands. Never add a profile implicitly.
-
-| Value | Mode | Funds |
-|---|---|---|
-| `live` | 实盘 | Real funds |
-| `demo` | 模拟盘 | Simulated funds |
+### Step B — Confirm trading mode
 
 **Resolution rules:**
-1. Current message intent is clear (e.g. "real" / "实盘" / "live" → `live`; "test" / "模拟" / "demo" → `demo`) → use it and inform the user: `"Using --profile live (实盘)"` or `"Using --profile demo (模拟盘)"`
-2. Current message has no explicit declaration → check conversation context for a previous profile:
-   - Found → use it, inform user: `"Continuing with --profile live (实盘) from earlier"`
+1. Current message intent is clear (e.g. "real" / "实盘" / "live" → live; "test" / "模拟" / "demo" → demo) → use it and inform the user
+2. Current message has no explicit declaration → check conversation context for a previous choice:
+   - Found → reuse it, inform user
    - Not found → ask: `"Live (实盘) or Demo (模拟盘)?"` — wait for answer before proceeding
 
-### Handling 401 Authentication Errors
+**How to apply the mode depends on auth method (detected in Step A):**
 
-If any command returns a 401 / authentication error:
+| Auth method | Live (实盘) | Demo (模拟盘) |
+|---|---|---|
+| **API Key** | `--profile <live-profile>` | `--profile <demo-profile>` |
+| **OAuth** | *(no flag needed, live is default)* | `--demo` |
+
+- **API Key users**: run `okx config show --json` to discover available profile names and their `demo` settings. Use `--profile <name>` to select the correct one.
+- **OAuth users**: omit flags for live trading; add `--demo` for simulated trading. Do **not** use `--profile` to switch modes.
+
+### Handling Authentication Errors
+
+**Authentication error** (error contains "401", "Session expired", or "Run `okx auth login` first"):
 1. **Stop immediately** — do not retry the same command
-2. Inform the user: "Authentication failed (401). Your API credentials may be invalid or expired."
-3. Guide the user to update credentials by editing the file directly with their local editor:
-   ```
-   ~/.okx/config.toml
-   ```
-   Update the fields `api_key`, `secret_key`, `passphrase` under the relevant profile.
-   Do NOT paste the new credentials into chat.
-4. After the user confirms the file is updated, run `okx config show` to verify (output is masked)
-5. Only then retry the original operation
+2. Inform the user: "Authentication failed. Your session may have expired."
+3. Load `okx-cex-auth` skill and follow the re-authentication steps
+4. After successful re-authentication, retry the original command
 
 ## Demo vs Live Mode
 
-Profile is the single control for 实盘/模拟盘 switching — exactly two options:
-
-| `--profile` | Mode | Funds |
-|---|---|---|
-| `live` | 实盘 | Real funds |
-| `demo` | 模拟盘 | Simulated funds |
+| Mode | Funds | API Key param | OAuth param |
+|---|---|---|---|
+| 实盘 (live) | Real funds | `--profile <live-profile>` | *(default, no flag)* |
+| 模拟盘 (demo) | Simulated funds | `--profile <demo-profile>` | `--demo` |
 
 ```bash
-okx --profile live  account balance     # 实盘
-okx --profile demo  account balance     # 模拟盘 (simulated balance)
+# API Key user
+okx --profile okx-prod  account balance     # 实盘
+okx --profile okx-demo  account balance     # 模拟盘
+
+# OAuth user
+okx account balance                          # 实盘 (default)
+okx --demo account balance                   # 模拟盘
 ```
 
 **Rules:**
-- **Read commands** (balance, positions, bills, etc.): always state which profile was used
-- **Write commands** (`transfer`, `set-position-mode`): **profile must be confirmed before execution** (see "Credential & Profile Check" Step B); transfer especially — wrong profile means wrong account
-- Every response after a command must append: `[profile: live]` or `[profile: demo]`
-- Do **not** use the `--demo` flag — use `--profile` instead
+- **Read commands** (balance, positions, bills, etc.): always state which mode was used
+- **Write commands** (`transfer`, `set-position-mode`): **mode must be confirmed before execution** (see "Credential & Profile Check" Step B); transfer especially — wrong mode means wrong account
+- Every response after a command must append: `[mode: live]` or `[mode: demo]`
 
 ## Skill Routing
 
@@ -151,7 +148,8 @@ okx account transfer --ccy USDT --amt 100 --from 6 --to 18
 | # | Command | Type | Description |
 |---|---|---|---|
 | 1 | `okx account balance [ccy]` | READ | Trading account equity, available, frozen |
-| 2 | `okx account asset-balance [ccy] [--valuation]` | READ | Funding account balance; `--valuation` adds earn/trading/funding valuation summary |
+| 2a | `okx account asset-balance [ccy]` | READ | Funding account balance (per-currency list) |
+| 2b | `okx account asset-balance [ccy] --valuation [--valuationCcy <ccy>]` | READ | Same + total asset valuation across trading/funding/earn; denomination defaults to USDT, override with `--valuationCcy BTC` |
 | 3 | `okx account positions` | READ | Open contract/swap positions |
 | 4 | `okx account positions-history` | READ | Closed positions + realized PnL |
 | 5 | `okx account bills` | READ | Account ledger (deposits, withdrawals, trades) |
@@ -174,7 +172,9 @@ okx account transfer --ccy USDT --amt 100 --from 6 --to 18
 > User: "I want to buy 0.1 BTC — do I have enough USDT?"
 
 ```
-1. okx-cex-portfolio okx account balance USDT               → check available equity
+1. okx-cex-portfolio okx account asset-balance --valuation   → total assets in USDT (trading/funding/earn breakdown)
+   → check details.trading (available in trading account)
+   → if trading balance < needed: check details.funding — may need to transfer
 2. okx-cex-market    okx market ticker BTC-USDT              → check current price
         ↓ user approves
 3. okx-cex-trade     okx spot place --instId BTC-USDT --side buy --ordType market --sz 0.1
@@ -184,7 +184,9 @@ okx account transfer --ccy USDT --amt 100 --from 6 --to 18
 > User: "I want to start a BTC grid bot with 1000 USDT"
 
 ```
-1. okx-cex-portfolio okx account balance USDT               → confirm available funds ≥ 1000
+1. okx-cex-portfolio okx account asset-balance --valuation   → total assets in USDT (trading/funding/earn breakdown)
+   → check details.trading ≥ 1000 (funds must be in trading account for grid bot)
+   → if details.funding has the USDT instead: use account transfer first
 2. okx-cex-market    okx market candles BTC-USDT --bar 4H --limit 50  → determine price range
         ↓ user approves
 3. okx-cex-bot       okx bot grid create --instId BTC-USDT --algoOrdType grid \
@@ -225,22 +227,13 @@ okx account transfer --ccy USDT --amt 100 --from 6 --to 18
 
 ### Step 0 — Credential & Profile Check
 
-Before any authenticated command:
+Before any authenticated command: see [Credential & Profile Check](#credential--profile-check). Determine auth method and trading mode before executing.
 
-**Determine profile (required):**
-- Options: `live` (实盘) or `demo` (模拟盘) — exactly these two values
-1. Current message intent clear (e.g. "real"/"实盘"/"live" → live; "test"/"模拟"/"demo" → demo) → use it, inform user: `"Using --profile live (实盘)"`
-2. Current message has no explicit declaration → check conversation context for previous profile:
-   - Found → use it, inform user: `"Continuing with --profile live (实盘) from earlier"`
-   - Not found → ask: `"Live (实盘) or Demo (模拟盘)?"` — wait for answer
-
-**If no credentials configured:** guide user to run `okx config init`, stop all trading actions
-
-**After every command result:** append `[profile: live]` or `[profile: demo]` to the response
+**After every command result:** append `[mode: live]` or `[mode: demo]` to the response
 
 ### Step 1: Identify account action
 
-- Check balance → `okx account balance` (trading) or `okx account asset-balance` (funding)
+- Check balance → `okx account balance` (trading equity only) or `okx account asset-balance` (funding balances) or `okx account asset-balance --valuation` (total across all accounts in USDT)
 - View open positions → `okx account positions`
 - View closed positions + PnL → `okx account positions-history`
 - View transaction history → `okx account bills`
@@ -289,17 +282,20 @@ Returns table: `currency`, `equity`, `available`, `frozen`. Only shows currencie
 ### Asset Balance — Funding Account
 
 ```bash
-okx account asset-balance [ccy] [--valuation] [--json]
+okx account asset-balance [ccy] [--valuation] [--valuationCcy <ccy>] [--json]
 ```
 
 | Param | Required | Default | Description |
 |---|---|---|---|
-| `ccy` | No | - | Filter to a single currency |
+| `ccy` | No | - | Filter to a specific currency (e.g., `USDT`); does not affect valuation denomination |
 | `--valuation` | No | false | Also show total asset valuation across all account types (trading/funding/earn) |
+| `--valuationCcy` | No | `USDT` | Currency in which to denominate the total asset valuation (e.g., `USDT`, `BTC`). Only used when `--valuation` is set. |
 
 Returns: `ccy`, `bal`, `availBal`, `frozenBal`. Only shows currencies with balance > 0.
 
-With `--valuation`: additionally prints a valuation summary table with `totalBal` and per-account-type breakdown (classic/earn/funding).
+With `--valuation`: additionally prints a valuation summary table with `totalBal` and per-account-type breakdown (`classic`/`earn`/`funding`/`trading`). The numbers are denominated in `--valuationCcy` (default `USDT`).
+
+**Important**: `ccy` (balance filter) and `--valuationCcy` (valuation denomination) are independent parameters — `ccy=BTC` filters the balance list to BTC rows but does NOT change the valuation currency; set `--valuationCcy BTC` explicitly for BTC-denominated totals.
 
 ---
 
@@ -446,7 +442,7 @@ Returns: `transId`, `ccy`, `amt`.
 | Tool | Description |
 |---|---|
 | `account_get_balance` | Trading account balance |
-| `account_get_asset_balance` | Funding account balance. Use `showValuation=true` to include total asset valuation across trading/funding/earn accounts. |
+| `account_get_asset_balance` | Funding account balance. Use `showValuation=true` to include total asset valuation across trading/funding/earn accounts. Use `valuationCcy` (default `"USDT"`) to set the denomination for the valuation total — e.g. `valuationCcy="BTC"` returns the total in BTC. |
 | `account_get_positions` | Open positions |
 | `account_get_positions_history` | Closed position history |
 | `account_get_bills` | Account bills (recent) |
@@ -511,6 +507,23 @@ okx account config
 # → uid: 123456789 | acctLv: 2 | posMode: net | autoLoan: false
 ```
 
+## Where Can the Money Live?
+
+OKX splits assets across multiple sub-accounts. The `--valuation` breakdown maps directly:
+
+| Account type | `details` key | Used for | Check with |
+|---|---|---|---|
+| Trading (unified) | `trading` | Spot, margin, swap, futures, options | `okx account balance` or `details.trading` in `--valuation` |
+| Funding | `funding` | Deposits/withdrawals, idle funds | `okx account asset-balance` or `details.funding` in `--valuation` |
+| Earn | `earn` | Simple earn, staking, savings | `details.earn` in `--valuation` |
+| Classic | `classic` | Classic account (legacy, less common) | `details.classic` in `--valuation` |
+
+**Typical flow when user says "I have X USDT but can't trade":**
+1. `okx account asset-balance --valuation` → look at each `details.*` field
+2. If `details.funding` is large and `details.trading` is small → the funds are in the funding account
+3. Transfer: `okx account transfer --ccy USDT --amt <n> --from 6 --to 18`
+4. Confirm: `okx account balance USDT` → equity should now reflect the transferred amount
+
 ## Edge Cases
 
 - **No balance shown**: balance is filtered to > 0 — if nothing shows, all currencies have zero balance
@@ -519,13 +532,13 @@ okx account config
 - **set-position-mode**: cannot switch to `net` if you have both long and short positions on the same instrument
 - **transfer --from/--to codes**: `6`=funding account, `18`=trading account; other values exist for sub-account flows
 - **max-size vs max-avail-size**: `max-size` is the theoretical maximum; `max-avail-size` accounts for existing orders and reserved margin
-- **Demo mode**: `okx --profile demo account balance` shows simulated balances, not real funds
+- **Demo mode**: `okx --demo account balance` (OAuth) or `okx --profile <demo-profile> account balance` (API Key) shows simulated balances, not real funds
 
 ## Global Notes
 
-- All write commands require valid credentials in `~/.okx/config.toml` or env vars
-- `--profile <name>` is required for all authenticated commands; see "Credential & Profile Check" section
-- Every command result includes a `[profile: <name>]` tag for audit reference
+- All write commands require valid credentials (OAuth session or API key in `~/.okx/config.toml`)
+- Auth method and trading mode are determined in "Credential & Profile Check"; see that section for parameter rules
+- Every command result includes a `[mode: live]` or `[mode: demo]` tag for audit reference
 - `--json` returns the raw OKX API v5 response by default. Add `--env` to wrap the output as `{"env": "<live|demo>", "profile": "<name>", "data": <response>}`
 - Rate limit: 10 requests per 2 seconds for account endpoints
 - Positions shown are for the unified trading account; funding account assets are separate

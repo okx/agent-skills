@@ -3,9 +3,9 @@
 ## earn savings balance
 
 ```bash
-okx --profile live earn savings balance           # all currencies
-okx --profile live earn savings balance USDT      # specific currency
-okx --profile live earn savings balance --json
+okx earn savings balance           # all currencies
+okx earn savings balance USDT      # specific currency
+okx earn savings balance --json
 ```
 
 Output fields: `ccy` · `amt` (total held) · `earnings` (cumulative) · `rate` (user's minimum lending rate) · `loanAmt` (actively lent) · `pendingAmt` (awaiting match)
@@ -17,8 +17,8 @@ Output fields: `ccy` · `amt` (total held) · `earnings` (cumulative) · `rate` 
 Subscribe funds into Simple Earn. Moves real funds.
 
 ```bash
-okx --profile live earn savings purchase --ccy USDT --amt 1000
-okx --profile live earn savings purchase --ccy USDT --amt 1000 --rate 0.02
+okx earn savings purchase --ccy USDT --amt 1000
+okx earn savings purchase --ccy USDT --amt 1000 --rate 0.02
 ```
 
 | Parameter | Required | Description |
@@ -28,8 +28,8 @@ okx --profile live earn savings purchase --ccy USDT --amt 1000 --rate 0.02
 | `--rate` | No | Minimum acceptable lending rate (decimal). Default: 0.01 (1%, the absolute minimum). |
 
 **Pre-execution checklist:**
-1. Check balance: `okx --profile live account asset-balance <ccy>` — verify user has sufficient funds; if insufficient, inform user and stop
-2. Fetch rates (in parallel with step 1): `okx --profile live earn savings rate-history --ccy <ccy> --limit 1 --json`
+1. Check balance: `okx account asset-balance <ccy>` — verify user has sufficient funds; if insufficient, inform user and stop
+2. Fetch rates (in parallel with step 1): `okx earn savings rate-history --ccy <ccy> --limit 1 --json`
 3. Show confirmation summary (see [Confirmation Templates](#confirmation-templates))
 4. Wait for user confirmation — if user declines, acknowledge and offer to adjust the amount or currency
 
@@ -40,7 +40,7 @@ okx --profile live earn savings purchase --ccy USDT --amt 1000 --rate 0.02
 Withdraw funds from Simple Earn. Moves real funds.
 
 ```bash
-okx --profile live earn savings redeem --ccy USDT --amt 500
+okx earn savings redeem --ccy USDT --amt 500
 ```
 
 | Parameter | Required | Description |
@@ -57,7 +57,7 @@ Pre-execution: show redemption summary (currency, amount, current APY, destinati
 Set the minimum acceptable lending rate.
 
 ```bash
-okx --profile live earn savings set-rate --ccy USDT --rate 0.01
+okx earn savings set-rate --ccy USDT --rate 0.01
 ```
 
 `--rate` is the user's minimum matching threshold — funds are lent only when the market lending rate ≥ this value. The actual yield is always `lendingRate`. Never tell users that lowering their minimum rate reduces earnings — this is incorrect.
@@ -69,8 +69,8 @@ okx --profile live earn savings set-rate --ccy USDT --rate 0.01
 Returns the **user's personal lending records** — transactions where the user lent coins and earned interest. This is NOT for querying market rates; use `earn savings rate-history` for market rate data.
 
 ```bash
-okx --profile live earn savings lending-history
-okx --profile live earn savings lending-history --ccy USDT --limit 10
+okx earn savings lending-history
+okx earn savings lending-history --ccy USDT --limit 10
 ```
 
 Output fields: `ccy` · `amt` (amount lent) · `earnings` (interest earned) · `rate` (rate applied to this record — same as `rate` in rate-history: the market threshold for that period) · `ts`
@@ -79,11 +79,11 @@ Output fields: `ccy` · `amt` (amount lent) · `earnings` (interest earned) · `
 
 ## earn savings rate-history
 
-Requires `--profile live`.
+Requires live mode (authenticated, no demo).
 
 ```bash
-okx --profile live earn savings rate-history --ccy USDT --limit 1 --json   # current real APY
-okx --profile live earn savings rate-history --ccy USDT --limit 30         # recent trend
+okx earn savings rate-history --ccy USDT --limit 1 --json   # current real APY
+okx earn savings rate-history --ccy USDT --limit 30         # recent trend
 ```
 
 | Parameter | Required | Description |
@@ -175,10 +175,10 @@ Plain-language status explanations (translate to user's language):
 Query fixed-term (定期) orders. Returns all orders or filtered by currency/state.
 
 ```bash
-okx --profile live earn savings fixed-orders --json
-okx --profile live earn savings fixed-orders --ccy USDT --json
-okx --profile live earn savings fixed-orders --state earning --json
-okx --profile live earn savings fixed-orders --ccy USDT --state pending --json
+okx earn savings fixed-orders --json
+okx earn savings fixed-orders --ccy USDT --json
+okx earn savings fixed-orders --state earning --json
+okx earn savings fixed-orders --ccy USDT --state pending --json
 ```
 
 | Parameter | Required | Description |
@@ -213,10 +213,10 @@ Subscribe to Simple Earn Fixed (定期). Two-step process: preview first, then c
 
 ```bash
 # Step 1: Preview (default — no --confirm flag)
-okx --profile live earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --json
+okx earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --json
 
 # Step 2: Confirm and execute
-okx --profile live earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --confirm --json
+okx earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D --confirm --json
 ```
 
 | Parameter | Required | Description |
@@ -227,13 +227,13 @@ okx --profile live earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D -
 | `--confirm` | No | Execute the subscription. Without this flag, only a preview is returned. |
 
 **Pre-execution checklist:**
-1. Check available offers: `okx --profile live earn savings rate-history --ccy <ccy> --json` — verify the requested term exists and has remaining quota
-2. Check balance (in parallel with step 1): `okx --profile live account asset-balance <ccy>` — verify user has sufficient funds in funding account; if insufficient, inform user and stop
+1. Check available offers: `okx earn savings rate-history --ccy <ccy> --json` — verify the requested term exists and has remaining quota
+2. Check balance (in parallel with step 1): `okx account asset-balance <ccy>` — verify user has sufficient funds in funding account; if insufficient, inform user and stop
 3. Preview the order (without `--confirm`): show the locked APR, term, and expected earnings. **Must** include this warning in the preview output: "⚠️ Orders still in 'pending' state can be cancelled before matching completes. Once the status changes to 'earning', funds are LOCKED until maturity — early redemption is NOT allowed."
 4. Show confirmation summary (see [Fixed-Term Confirmation Templates](#fixed-term-confirmation-templates))
 5. Wait for user confirmation — if user declines, acknowledge and offer to adjust amount or term
 
-**After successful purchase:** Run `okx --profile live earn savings fixed-orders --ccy <ccy> --state pending --json` to verify the order was created. Show the new order details.
+**After successful purchase:** Run `okx earn savings fixed-orders --ccy <ccy> --state pending --json` to verify the order was created. Show the new order details.
 
 ---
 
@@ -242,7 +242,7 @@ okx --profile live earn savings fixed-purchase --ccy USDT --amt 1000 --term 7D -
 Redeem a fixed-term order. Redeems the full amount — partial redemption is not supported. Only orders in `pending` state can be redeemed early.
 
 ```bash
-okx --profile live earn savings fixed-redeem <reqId> --json
+okx earn savings fixed-redeem <reqId> --json
 ```
 
 | Parameter | Required | Description |
@@ -250,11 +250,11 @@ okx --profile live earn savings fixed-redeem <reqId> --json
 | `<reqId>` | Yes | Order ID (positional) from `earn savings fixed-orders` |
 
 **Pre-execution checklist:**
-1. Check order state: `okx --profile live earn savings fixed-orders --json` — find the order and verify `state` is `pending`
+1. Check order state: `okx earn savings fixed-orders --json` — find the order and verify `state` is `pending`
 2. If state is `earning`: inform the user that orders in earning state cannot be redeemed early — they must wait until expiry
 3. If state is `pending`: show redemption summary (see [Fixed-Term Confirmation Templates](#fixed-term-confirmation-templates)), wait for confirmation
 
-**After successful redemption:** Run `okx --profile live earn savings fixed-orders --json` to confirm the order state changed to `cancelled`. Inform user that full principal has been returned to the funding account (资金账户). No interest is earned for cancelled orders.
+**After successful redemption:** Run `okx earn savings fixed-orders --json` to confirm the order state changed to `cancelled`. Inform user that full principal has been returned to the funding account (资金账户). No interest is earned for cancelled orders.
 
 ---
 

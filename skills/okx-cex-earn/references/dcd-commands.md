@@ -33,7 +33,7 @@ Average index price between 15:00–16:00 (UTC+8) on the expiry date — not rea
 ## earn dcd pairs
 
 ```bash
-okx --profile live earn dcd pairs
+okx earn dcd pairs
 ```
 
 Output fields: `baseCcy` · `quoteCcy` · `optType`
@@ -44,8 +44,8 @@ Output fields: `baseCcy` · `quoteCcy` · `optType`
 ## earn dcd products
 
 ```bash
-okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C
-okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000 --minYield 0.05 --maxTermDays 7
+okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C
+okx earn dcd products --baseCcy BTC --quoteCcy USDT --optType C --strikeNear 72000 --minYield 0.05 --maxTermDays 7
 ```
 
 | Parameter | Required | Description |
@@ -94,7 +94,7 @@ okx --profile live earn dcd products --baseCcy BTC --quoteCcy USDT --optType C -
 ## earn dcd quote-and-buy
 
 ```bash
-okx --profile live earn dcd quote-and-buy --productId BTC-USDT-260327-72000-C --sz 100 --notionalCcy USDT
+okx earn dcd quote-and-buy --productId BTC-USDT-260327-72000-C --sz 100 --notionalCcy USDT
 ```
 
 | Parameter | Required | Description |
@@ -128,7 +128,7 @@ okx --profile live earn dcd quote-and-buy --productId BTC-USDT-260327-72000-C --
 Quick state check for a single order. Returns lightweight status only — use `earn dcd orders --ordId` for full detail.
 
 ```bash
-okx --profile live earn dcd order --ordId <id>
+okx earn dcd order --ordId <id>
 ```
 
 | Parameter | Required | Description |
@@ -144,8 +144,8 @@ Output fields: `ordId` · `state`
 ## earn dcd orders
 
 ```bash
-okx --profile live earn dcd orders --json
-okx --profile live earn dcd orders --ordId <id> --json
+okx earn dcd orders --json
+okx earn dcd orders --ordId <id> --json
 ```
 
 | Parameter | Required | Description |
@@ -180,7 +180,7 @@ After list: prompt user they can ask to view details or request early redemption
 ## earn dcd redeem-execute
 
 ```bash
-okx --profile live earn dcd redeem-execute --ordId <id>
+okx earn dcd redeem-execute --ordId <id>
 ```
 
 Two-step flow (handled internally):
@@ -196,7 +196,7 @@ Output fields: `redeemSz` · `redeemCcy` · `termRate` (positive = gain, negativ
 
 When this error occurs, the order exists but the current time is outside the allowed redemption window. Do NOT just surface the raw error. Instead:
 
-1. Run `okx --profile live earn dcd orders --ordId <id> --json` to fetch the order's `redeemStartTime` and `redeemEndTime`
+1. Run `okx earn dcd orders --ordId <id> --json` to fetch the order's `redeemStartTime` and `redeemEndTime`
 2. Tell the user when the window opens: "Early redemption for this order is available from `{redeemStartTime}` to `{redeemEndTime}`. Please try again after that time."
 3. If `redeemStartTime` is empty, the product does not support early redemption at all — inform the user accordingly.
 

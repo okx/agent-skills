@@ -3,9 +3,9 @@
 ## earn onchain offers
 
 ```bash
-okx --profile live earn onchain offers
-okx --profile live earn onchain offers --ccy ETH
-okx --profile live earn onchain offers --protocolType staking
+okx earn onchain offers
+okx earn onchain offers --ccy ETH
+okx earn onchain offers --protocolType staking
 ```
 
 | Parameter | Required | Description |
@@ -25,8 +25,8 @@ When multiple products exist for the same currency, compare and highlight: APY, 
 Subscribe to an on-chain earn product. Moves real funds to on-chain protocol.
 
 ```bash
-okx --profile live earn onchain purchase --productId 4013 --ccy ETH --amt 1
-okx --profile live earn onchain purchase --productId 4013 --ccy ETH --amt 1 --term 30
+okx earn onchain purchase --productId 4013 --ccy ETH --amt 1
+okx earn onchain purchase --productId 4013 --ccy ETH --amt 1 --term 30
 ```
 
 | Parameter | Required | Description |
@@ -47,8 +47,8 @@ okx --profile live earn onchain purchase --productId 4013 --ccy ETH --amt 1 --te
 ## earn onchain redeem
 
 ```bash
-okx --profile live earn onchain redeem --ordId 12345 --protocolType staking
-okx --profile live earn onchain redeem --ordId 12345 --protocolType staking --allowEarlyRedeem
+okx earn onchain redeem --ordId 12345 --protocolType staking
+okx earn onchain redeem --ordId 12345 --protocolType staking --allowEarlyRedeem
 ```
 
 | Parameter | Required | Description |
@@ -86,7 +86,7 @@ For **flexible/open-ended products** (`term: 0`), normal redemption is always av
 Cancel a pending on-chain order (not yet on-chain).
 
 ```bash
-okx --profile live earn onchain cancel --ordId 12345 --protocolType defi
+okx earn onchain cancel --ordId 12345 --protocolType defi
 ```
 
 Only for `state: 8` (pending). Orders already on-chain cannot be cancelled — use redeem instead.
@@ -96,8 +96,8 @@ Only for `state: 8` (pending). Orders already on-chain cannot be cancelled — u
 ## earn onchain orders
 
 ```bash
-okx --profile live earn onchain orders --json
-okx --profile live earn onchain orders --ccy ETH --protocolType staking --json
+okx earn onchain orders --json
+okx earn onchain orders --ccy ETH --protocolType staking --json
 ```
 
 Always use `--json` and render results as a Markdown table. Show reward breakdown from `earningData`. Translate state codes using the table below.
@@ -117,9 +117,9 @@ Always use `--json` and render results as a Markdown table. Show reward breakdow
 ## earn onchain history
 
 ```bash
-okx --profile live earn onchain history --json
-okx --profile live earn onchain history --ccy ETH --json
-okx --profile live earn onchain history --ccy ETH --limit 20 --json
+okx earn onchain history --json
+okx earn onchain history --ccy ETH --json
+okx earn onchain history --ccy ETH --limit 20 --json
 ```
 
 | Parameter | Required | Description |

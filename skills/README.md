@@ -8,11 +8,15 @@ Pre-built skills for AI agents to operate OKX via the `okx` CLI. Each skill is a
 
 | Skill | Description | Auth Required |
 |-------|-------------|:-------------:|
+| [`okx-cex-auth`](okx-cex-auth/SKILL.md) | OAuth 2.0 device-flow login, logout, and session-expired recovery | — |
 | [`okx-cex-market`](okx-cex-market/SKILL.md) | Public market data: prices, order books, candles, funding rates, open interest, instruments, technical indicators | No |
 | [`okx-cex-trade`](okx-cex-trade/SKILL.md) | Order management: spot, perpetual swap, delivery futures, options, TP/SL and trailing stop algo orders | Yes |
 | [`okx-cex-portfolio`](okx-cex-portfolio/SKILL.md) | Account operations: balances, positions, P&L, fees, fund transfers | Yes |
 | [`okx-cex-bot`](okx-cex-bot/SKILL.md) | Automated strategies: spot/contract grid bots and DCA (Spot & Contract) bots | Yes |
 | [`okx-cex-earn`](okx-cex-earn/SKILL.md) | Earn products: Simple Earn, On-chain staking, Dual Investment (双币赢), AutoEarn | Yes |
+| [`okx-cex-smartmoney`](okx-cex-smartmoney/SKILL.md) | Smart Money analytics: leaderboard traders, position tracking, consensus signals | Yes |
+| [`okx-sentiment-tracker`](okx-sentiment-tracker/SKILL.md) | Crypto news aggregation and coin sentiment analysis | Yes |
+| [`okx-cex-skill-mp`](okx-cex-skill-mp/SKILL.md) | Skills marketplace: discover, install, update, and remove third-party skills | Yes |
 
 ## Requirements
 
@@ -45,7 +49,7 @@ metadata:
 
 The `description` field is used by the agent routing system to decide when to activate the skill. Skills with `references/` subdirectories use `{baseDir}` as a runtime-resolved path variable pointing to that skill's directory.
 
-> **`description` length limit**: Codex CLI enforces a **1024-character maximum** on this field. Descriptions that exceed this limit prevent Codex from loading the skill pack. Keep descriptions under 900 chars to leave headroom for future trigger additions. A CI test (`packages/cli/test/skill-description-length.test.ts`) enforces the 1024-char ceiling automatically.
+> **`description` length limit**: Codex CLI enforces a **1024-character maximum** on this field. Descriptions that exceed this limit prevent Codex from loading the skill pack. Keep descriptions under 900 chars to leave headroom for future trigger additions; the 1024-char ceiling is enforced by upstream CI in [`okx/agent-tradekit`](https://github.com/okx/agent-tradekit).
 
 ## Contributing
 

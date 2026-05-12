@@ -5,6 +5,7 @@ on:
     branches: [master]
   push:
     branches: [master]
+  workflow_dispatch: {}
 
 jobs:
   opensource-guard:
@@ -18,12 +19,15 @@ jobs:
       - name: Determine base ref
         id: base
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
-          else
-            # push to master: compare against previous commit
-            echo "ref=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
-          fi
+          case "${{ github.event_name }}" in
+            pull_request)
+              echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT" ;;
+            push)
+              echo "ref=${{ github.event.before }}" >> "$GITHUB_OUTPUT" ;;
+            *)
+              # workflow_dispatch or anything else: no base -> full-tree scan
+              echo "ref=__none__" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Run open-source guard
         run: bash scripts/check-opensource.sh "${{ steps.base.outputs.ref }}"

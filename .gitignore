@@ -27,3 +27,6 @@ node_modules/
 Thumbs.db
 ehthumbs.db
 
+
+# Build output (skill zips) — never committed
+/dist/

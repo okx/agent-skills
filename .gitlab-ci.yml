@@ -1,0 +1,25 @@
+stages:
+  - sync
+
+# Sync version-changed official skills to the Skills Marketplace.
+# Runs only on the publish branches, and only when skill or tooling files change.
+sync_official_skills:
+  stage: sync
+  image: debian:bookworm-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "github-main" || $CI_COMMIT_BRANCH == "github-main-test-mp"'
+      changes:
+        - "skills/**/SKILL.md"
+        - "scripts/**/*"
+        - ".gitlab-ci.yml"
+  variables:
+    GIT_DEPTH: "0"   # full history so detect_changed_skills.sh can diff the previous commit
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends git jq zip wget ca-certificates
+    - wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+    - chmod +x /usr/local/bin/yq
+    - yq --version
+  script:
+    - bash scripts/sync_official_skills.sh
+  # SKILLS_MP_TEST_USER must be set in Settings -> CI/CD -> Variables (Masked + Protected).
+  # Set DRY_RUN=1 as a pipeline variable to pack without uploading.

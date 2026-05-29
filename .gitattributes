@@ -1,0 +1,9 @@
+# Internal Skills Marketplace sync tooling.
+# These files exist only to run the GitLab CI sync pipeline and must NOT be
+# published outward (GitHub mirror / Clawhub / Marketplace zips).
+# `export-ignore` removes them from `git archive` / export-based publishing.
+# NOTE: this does not affect a raw git *push* mirror — if the GitHub mirror is
+# push-based, exclude these paths in the mirror configuration as well.
+/scripts/          export-ignore
+/.gitlab-ci.yml    export-ignore
+/.gitattributes    export-ignore

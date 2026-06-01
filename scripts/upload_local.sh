@@ -12,6 +12,11 @@
 #      scripts/upload_local.sh --all                        # every skill under skills/
 #      scripts/upload_local.sh --changed                    # only version-changed vs previous commit
 #      DRY_RUN=1 scripts/upload_local.sh --all              # pack only, do NOT upload
+#      KEEP_DIST=1 scripts/upload_local.sh --all            # keep dist/ artifacts (skip cleanup)
+#
+# Cleanup: the dist/<name>/ staging dir is removed right after zipping; on a
+# successful upload the zip is deleted too. DRY_RUN keeps zips for inspection.
+# Set KEEP_DIST=1 to keep everything.
 #
 # Requires: bash, yq (mikefarah v4), jq, zip, openssl, curl, git.
 set -euo pipefail
@@ -46,7 +51,7 @@ category_for() {
   esac
 }
 
-usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { awk 'NR>=2 && /^#/{sub(/^# ?/,""); print; next} NR>=2{exit}' "$0"; exit "${1:-0}"; }
 
 # ---- change detection (only used by --changed) ------------------------------
 version_at_ref() {  # $1=ref ("" = working tree)  $2=path
@@ -92,6 +97,7 @@ pack_skill() {
     > "$stage/_meta.json"
   zipfile="$OUT_DIR/${name}-${version}.zip"; rm -f "$zipfile"
   ( cd "$stage" && zip -rq "$OLDPWD/$zipfile" . )
+  [ "${KEEP_DIST:-0}" = "1" ] || rm -rf "$stage"   # drop the intermediate unzipped copy
   printf '%s\n' "$zipfile"
 }
 
@@ -149,8 +155,9 @@ for name in "${TARGETS[@]}"; do
   log "uploading $name v$VERSION ..."
   set +e; bash "$SYNC_SCRIPT"; rc=$?; set -e
   case "$rc" in
-    0) log "OK: $name v$VERSION"; SYNCED+=("$name v$VERSION") ;;
-    *) log_error "$name v$VERSION failed (exit $rc)"; FAILED+=("$name v$VERSION (exit $rc)") ;;
+    0) log "OK: $name v$VERSION"; SYNCED+=("$name v$VERSION")
+       [ "${KEEP_DIST:-0}" = "1" ] || { rm -f "$zip_path"; log "cleaned $zip_path"; } ;;
+    *) log_error "$name v$VERSION failed (exit $rc); kept $zip_path for debugging"; FAILED+=("$name v$VERSION (exit $rc)") ;;
   esac
 done
 
@@ -158,5 +165,6 @@ log_step "Summary"
 log "synced  (${#SYNCED[@]}): ${SYNCED[*]:-none}"
 log "skipped (${#SKIPPED[@]}): ${SKIPPED[*]:-none}"
 log "failed  (${#FAILED[@]}): ${FAILED[*]:-none}"
+[ "${KEEP_DIST:-0}" = "1" ] || rmdir "$OUT_DIR" 2>/dev/null || true   # remove dist/ only if now empty
 [ "${#FAILED[@]}" -eq 0 ] || { log_error "one or more uploads failed"; exit 1; }
 log "done"

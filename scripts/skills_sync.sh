@@ -202,7 +202,7 @@ update_skill() {
 #    sync skill
 # =============================================================================
 sync_skill() {
-    RESPONSE=$(curl -X POST "https://www.okx.com//priapi/v5/trade/skill/public/detail" \
+    RESPONSE=$(curl -X POST "https://www.okx.com/priapi/v5/trade/skill/public/detail" \
 	-H "Content-Type: application/json" \
   	-H "Authorization: ${TOKEN}" \
   	-d "{\"name\": \"${NAME}\"}")
@@ -212,10 +212,10 @@ sync_skill() {
     echo "Response code: $CODE"
     if [[ "$CODE" == "0" ]]; then
         echo "skill $NAME found, updating skill..."
-	#update_skill
+	update_skill
     elif [[ "$CODE" == "80001" ]]; then
     	echo "skill $NAME not found, uploading skill..."
-	#upload_skill
+	upload_skill
     else
         echo "[sync_skill] response: $RESPONSE" >&2
         exit 1

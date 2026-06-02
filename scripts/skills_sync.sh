@@ -148,6 +148,7 @@ get_token() {
 # =============================================================================
 # 5. upload_skill
 #    upload a new skill
+#    example: ./skills_sync.sh upload_skill
 # =============================================================================
 upload_skill() {
     RESPONSE=$(curl -X POST "https://www.okx.com/priapi/v5/trade/skill/my/upload" \
@@ -174,6 +175,7 @@ upload_skill() {
 # =============================================================================
 # 6. update_skill
 #    update an existing skill
+#    example: ./skills_sync.sh update_skill
 # =============================================================================
 update_skill() {
     RESPONSE=$(curl -X POST "https://www.okx.com/priapi/v5/trade/skill/my/upload-version" \
@@ -222,6 +224,35 @@ sync_skill() {
     fi
 }
 
+# =============================================================================
+# 8. get_version
+#    get skill version $CURR_VERSION , return "-1" if skill not found
+#    example: ./skills_sync.sh get_version
+# =============================================================================
+get_version() {
+    RESPONSE=$(curl -X POST "https://www.okx.com/priapi/v5/trade/skill/public/detail" \
+	-H "Content-Type: application/json" \
+  	-H "Authorization: ${TOKEN}" \
+  	-d "{\"name\": \"${NAME}\"}")
+
+    echo "skill detail response: $RESPONSE"
+    CODE=$(echo "$RESPONSE" | grep -o '"code":"[^"]*"' | head -1 | cut -d'"' -f4)
+    CURR_VERSION="-1"
+
+    echo "Response code: $CODE"
+    if [[ "$CODE" == "0" ]]; then
+        CURR_VERSION=$(echo "$RESPONSE" | grep -o '"lastApprovedVersion":"[^"]*"' | cut -d'"' -f4)
+        echo "skill $NAME found, current version: $CURR_VERSION "
+        export CURR_VERSION
+    elif [[ "$CODE" == "80001" ]]; then
+    	echo "skill $NAME not found, it's a new skill"
+    	export CURR_VERSION
+    else
+        echo "[sync_skill] response: $RESPONSE" >&2
+        exit 1
+    fi
+}
+
 # ─────────────────────────────────────────────
 # 8. CLI entry-point
 # ─────────────────────────────────────────────
@@ -245,7 +276,7 @@ case "$cmd" in
         ;;
     sync_skill)
         echo "start sync_skill"
-	get_token
+	      get_token
         sync_skill
         echo "complete sync_skill"
         ;;
@@ -256,14 +287,18 @@ case "$cmd" in
         ;;
     upload_skill)
         echo "uploading skill"
-        get_token
         upload_skill
         echo ""
         ;;
     update_skill)
         echo "updating skill"
-        get_token
         update_skill
+        echo ""
+        ;;
+    get_version)
+        echo "getting skill version"
+        get_token
+        get_version
         echo ""
         ;;
     *)

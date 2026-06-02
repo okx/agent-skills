@@ -3,8 +3,10 @@
 # Self-contained: the only other file it needs is skills_sync.sh (the signed
 # login + priapi upload). Run this one script to achieve the goal.
 #
-# 1) Export the non-2FA test account JSON (never commit this value):
-#      export SKILLS_MP_TEST_USER='{"loginName":"you@okg.com","password":"...","passwordHash":"..."}'
+# 1) Provide the non-2FA test account JSON via the project .env (never commit it).
+#    Copy .env.example to .env and fill in the value:
+#      SKILLS_MP_TEST_USER='{"loginName":"you@okg.com","password":"...","passwordHash":"..."}'
+#    (.env is gitignored. A pre-exported env var still overrides the .env file.)
 #
 # 2) Run one of:
 #      scripts/upload_local.sh okx-cex-trade                # one or more skills by name
@@ -22,12 +24,20 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
+SELF="$HERE/$(basename "$0")"   # absolute path to this script (survives the cd below)
 cd "$(git rev-parse --show-toplevel)"
 
 SKILLS_DIR="${SKILLS_DIR:-skills}"
 OUT_DIR="${OUT_DIR:-dist}"
 SYNC_SCRIPT="${SYNC_SCRIPT:-$HERE/skills_sync.sh}"
 DRY_RUN="${DRY_RUN:-0}"
+
+# ---- load credentials from project .env (gitignored; never committed) -------
+# A pre-set environment variable always wins over the .env file.
+ENV_FILE="${ENV_FILE:-.env}"
+if [ -z "${SKILLS_MP_TEST_USER:-}" ] && [ -f "$ENV_FILE" ]; then
+  set -a; . "$ENV_FILE"; set +a
+fi
 
 # ---- logging (to stderr, so stdout stays clean for captured values) ---------
 _ts() { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
@@ -51,7 +61,7 @@ category_for() {
   esac
 }
 
-usage() { awk 'NR>=2 && /^#/{sub(/^# ?/,""); print; next} NR>=2{exit}' "$0"; exit "${1:-0}"; }
+usage() { awk 'NR>=2 && /^#/{sub(/^# ?/,""); print; next} NR>=2{exit}' "$SELF"; exit "${1:-0}"; }
 
 # ---- change detection (only used by --changed) ------------------------------
 version_at_ref() {  # $1=ref ("" = working tree)  $2=path
@@ -124,8 +134,8 @@ log "targets: ${TARGETS[*]}"
 # ---- credentials (real upload only) -----------------------------------------
 if [ "$DRY_RUN" != "1" ]; then
   if [ -z "${SKILLS_MP_TEST_USER:-}" ]; then
-    log_error "SKILLS_MP_TEST_USER is not set. Export it first, e.g.:"
-    log_error "  export SKILLS_MP_TEST_USER='{\"loginName\":\"you@okg.com\",\"password\":\"...\",\"passwordHash\":\"...\"}'"
+    log_error "SKILLS_MP_TEST_USER is not set. Add it to $ENV_FILE (copy .env.example), e.g.:"
+    log_error "  SKILLS_MP_TEST_USER='{\"loginName\":\"you@okg.com\",\"password\":\"...\",\"passwordHash\":\"...\"}'"
     exit 1
   fi
   export USER="$SKILLS_MP_TEST_USER"

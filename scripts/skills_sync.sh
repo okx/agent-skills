@@ -130,19 +130,42 @@ get_token() {
         -d "$USER")
 
     # ── 检查 code，提取 token（纯 shell）─────────────────────────────────
-    CODE=$(echo "$RESPONSE" | grep -o '"code":[0-9]*' | head -1 | cut -d: -f2)
-    TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4)
- 
+    # `|| true`: on a failed login the response has no token field, so grep
+    # exits non-zero; without this, set -e + pipefail aborts here before the
+    # friendly error below can print the real reason.
+    CODE=$(echo "$RESPONSE" | grep -o '"code":[0-9]*' | head -1 | cut -d: -f2 || true)
+    TOKEN=$(echo "$RESPONSE" | grep -o '"token":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+
     if [[ "$CODE" == "0" ]]; then
         echo "[login] Login success"
         echo "[login] TOKEN: ${TOKEN:0:40}..."
         export TOKEN
+        # Hand the token back to a caller (e.g. upload_local.sh batch login) via a
+        # file instead of stdout/argv, so the secret never lands in logs or a
+        # command line. Caller is responsible for chmod 600 + cleanup.
+        if [[ -n "${TOKEN_FILE:-}" ]]; then
+            ( umask 077; printf '%s' "$TOKEN" > "$TOKEN_FILE" )
+            echo "[login] token written to TOKEN_FILE"
+        fi
     else
         echo "[login] Login failed, code: $CODE" >&2
         echo "[login] response: $RESPONSE" >&2
         exit 1
     fi
 
+}
+
+# =============================================================================
+# 4b. ensure_token
+#     Reuse a TOKEN already provided in the environment (batch login), otherwise
+#     log in. Lets callers log in once and reuse the token across many skills.
+# =============================================================================
+ensure_token() {
+    if [[ -n "${TOKEN:-}" ]]; then
+        echo "[token] reusing TOKEN from environment (${#TOKEN} chars)"
+    else
+        get_token
+    fi
 }
 
 # =============================================================================
@@ -201,27 +224,39 @@ update_skill() {
 
 # =============================================================================
 # 7. sync_skill
-#    sync skill
+#    Query the remote version first, then decide the action:
+#      - remote not found (CURR_VERSION == -1) -> first upload   (upload_skill)
+#      - remote version == local VERSION       -> up-to-date, skip (exit 2)
+#      - otherwise                              -> incremental    (update_skill)
+#    DRY_RUN=1 only reports the planned action without uploading.
+#    Exit codes: 0 uploaded/updated (or planned), 2 skipped (up-to-date).
 # =============================================================================
 sync_skill() {
-    RESPONSE=$(curl -X POST "https://www.okx.com/priapi/v5/trade/skill/public/detail" \
-	-H "Content-Type: application/json" \
-  	-H "Authorization: ${TOKEN}" \
-  	-d "{\"name\": \"${NAME}\"}")
+    # query remote -> sets CURR_VERSION (-1 when the skill does not exist yet)
+    get_version
 
-    echo "skill detail response: $RESPONSE"
-    CODE=$(echo "$RESPONSE" | grep -o '"code":"[^"]*"' | head -1 | cut -d'"' -f4)
-    echo "Response code: $CODE"
-    if [[ "$CODE" == "0" ]]; then
-        echo "skill $NAME found, updating skill..."
-	update_skill
-    elif [[ "$CODE" == "80001" ]]; then
-    	echo "skill $NAME not found, uploading skill..."
-	upload_skill
+    local action
+    if [[ "$CURR_VERSION" == "-1" ]]; then
+        action="upload"
+        echo "[sync_skill] $NAME not found remotely -> first upload (v$VERSION)"
+    elif [[ "$CURR_VERSION" == "$VERSION" ]]; then
+        action="skip"
+        echo "[sync_skill] $NAME already at v$VERSION remotely -> up-to-date, skip"
     else
-        echo "[sync_skill] response: $RESPONSE" >&2
-        exit 1
+        action="update"
+        echo "[sync_skill] $NAME remote v$CURR_VERSION -> incremental update to v$VERSION"
     fi
+
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then
+        echo "[sync_skill] DRY_RUN: would $action $NAME (remote='$CURR_VERSION', local='$VERSION')"
+        [[ "$action" == "skip" ]] && exit 2 || exit 0
+    fi
+
+    case "$action" in
+        upload) upload_skill ;;
+        update) update_skill ;;
+        skip)   echo "[sync_skill] nothing to upload for $NAME"; exit 2 ;;
+    esac
 }
 
 # =============================================================================
@@ -241,8 +276,12 @@ get_version() {
 
     echo "Response code: $CODE"
     if [[ "$CODE" == "0" ]]; then
-        CURR_VERSION=$(echo "$RESPONSE" | grep -o '"lastApprovedVersion":"[^"]*"' | cut -d'"' -f4)
-        echo "skill $NAME found, current version: $CURR_VERSION "
+        # Skill exists. lastApprovedVersion may be null (e.g. never-approved or
+        # another user's skill) — grep then finds no quoted value; tolerate that
+        # under `set -euo pipefail` and leave CURR_VERSION empty (still != -1, so
+        # the skill is treated as existing -> incremental update, not first upload).
+        CURR_VERSION=$(echo "$RESPONSE" | grep -o '"lastApprovedVersion":"[^"]*"' | cut -d'"' -f4 || true)
+        echo "skill $NAME found, current approved version: '${CURR_VERSION}'"
         export CURR_VERSION
     elif [[ "$CODE" == "80001" ]]; then
     	echo "skill $NAME not found, it's a new skill"
@@ -250,6 +289,14 @@ get_version() {
     else
         echo "[sync_skill] response: $RESPONSE" >&2
         exit 1
+    fi
+
+    # Surface the resolved remote version: log it, and (if requested) hand it
+    # back to the caller via a file so the orchestrator can print it too.
+    #   '-1' = skill not on remote (new) ; '' = exists but no approved version.
+    echo "[get_version] $NAME remote version = '${CURR_VERSION}'  ('-1' = not on remote)"
+    if [[ -n "${VERSION_OUT:-}" ]]; then
+        printf '%s' "$CURR_VERSION" > "$VERSION_OUT"
     fi
 }
 
@@ -276,7 +323,7 @@ case "$cmd" in
         ;;
     sync_skill)
         echo "start sync_skill"
-	      get_token
+	      ensure_token
         sync_skill
         echo "complete sync_skill"
         ;;
@@ -297,7 +344,7 @@ case "$cmd" in
         ;;
     get_version)
         echo "getting skill version"
-        get_token
+        ensure_token
         get_version
         echo ""
         ;;

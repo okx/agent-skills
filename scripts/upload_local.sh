@@ -12,9 +12,13 @@
 #      scripts/upload_local.sh okx-cex-trade                # one or more skills by name
 #      scripts/upload_local.sh okx-cex-trade okx-cex-bot
 #      scripts/upload_local.sh --all                        # every skill under skills/
-#      scripts/upload_local.sh --changed                    # only version-changed vs previous commit
-#      DRY_RUN=1 scripts/upload_local.sh --all              # pack only, do NOT upload
+#      DRY_RUN=1 scripts/upload_local.sh --all              # plan only: query remote, print create/update/skip, do NOT upload
 #      KEEP_DIST=1 scripts/upload_local.sh --all            # keep dist/ artifacts (skip cleanup)
+#
+# Per skill the remote version is queried first to decide the action:
+#   first upload (not on remote) / incremental update / skip (already up-to-date).
+# DRY_RUN reports that plan without uploading — it still logs in and queries the
+# remote, so SKILLS_MP_TEST_USER is required in dry-run too.
 #
 # Cleanup: the dist/<name>/ staging dir is removed right after zipping; on a
 # successful upload the zip is deleted too. DRY_RUN keeps zips for inspection.
@@ -63,32 +67,6 @@ category_for() {
 
 usage() { awk 'NR>=2 && /^#/{sub(/^# ?/,""); print; next} NR>=2{exit}' "$SELF"; exit "${1:-0}"; }
 
-# ---- change detection (only used by --changed) ------------------------------
-version_at_ref() {  # $1=ref ("" = working tree)  $2=path
-  local ref="$1" path="$2"
-  if [ -z "$ref" ]; then
-    [ -f "$path" ] && frontmatter "$path" | yq -r '.metadata.version // ""' 2>/dev/null || true
-  else
-    git show "$ref:$path" 2>/dev/null \
-      | awk 'BEGIN{c=0} /^---[[:space:]]*$/{c++;next} c==1{print} c>=2{exit}' \
-      | yq -r '.metadata.version // ""' 2>/dev/null || true
-  fi
-}
-detect_changed() {  # prints version-changed skill names to stdout
-  local base="${CI_COMMIT_BEFORE_SHA:-HEAD~1}" dir name md new_v old_v
-  git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1 || base="HEAD~1"
-  git rev-parse --verify --quiet "${base}^{commit}" >/dev/null 2>&1 || base=""
-  log "change base ref: ${base:-<none>}"
-  for dir in "$SKILLS_DIR"/*/; do
-    name="$(basename "$dir")"; md="${dir%/}/SKILL.md"
-    [ -f "$md" ] || continue
-    new_v="$(version_at_ref "" "$md")"; old_v="$(version_at_ref "$base" "$md")"
-    [ -n "$new_v" ] || continue
-    if [ "$new_v" != "$old_v" ]; then log "CHANGED $name: '${old_v:-<none>}' -> '$new_v'"; printf '%s\n' "$name"
-    else log "unchanged $name: $new_v"; fi
-  done
-}
-
 # ---- pack one skill into dist/<name>-<version>.zip; echoes the zip path ------
 pack_skill() {
   local name="$1" src="$SKILLS_DIR/$1" version desc title categories stage zipfile
@@ -115,45 +93,68 @@ pack_skill() {
 [ $# -ge 1 ] || usage 1
 for t in yq jq zip git; do require_tool "$t"; done
 
+SELECTOR="${1:-}"
+log_step "Resolve targets (selector='$SELECTOR', dry_run=$DRY_RUN)"
 declare -a TARGETS=()
-case "${1:-}" in
+case "$SELECTOR" in
   -h|--help) usage 0 ;;
-  --all)     for d in "$SKILLS_DIR"/*/; do [ -f "${d%/}/SKILL.md" ] && TARGETS+=("$(basename "$d")"); done ;;
-  --changed) while IFS= read -r n; do [ -n "$n" ] && TARGETS+=("$n"); done < <(detect_changed) ;;
+  --all)     log "mode --all: selecting every skill under $SKILLS_DIR/"
+             for d in "$SKILLS_DIR"/*/; do [ -f "${d%/}/SKILL.md" ] && TARGETS+=("$(basename "$d")"); done ;;
   -*)        log_error "unknown option: $1"; usage 1 ;;
-  *)         for name in "$@"; do
+  *)         log "mode explicit: $*"
+             for name in "$@"; do
                [ -f "$SKILLS_DIR/$name/SKILL.md" ] && TARGETS+=("$name") \
                  || { log_error "no such skill: $SKILLS_DIR/$name/SKILL.md"; exit 1; }
              done ;;
 esac
 
-log_step "Local upload (dry_run=$DRY_RUN)"
-[ "${#TARGETS[@]}" -gt 0 ] || { log_warn "no target skills resolved — nothing to do"; exit 0; }
-log "targets: ${TARGETS[*]}"
-
-# ---- credentials (real upload only) -----------------------------------------
-if [ "$DRY_RUN" != "1" ]; then
-  if [ -z "${SKILLS_MP_TEST_USER:-}" ]; then
-    log_error "SKILLS_MP_TEST_USER is not set. Add it to $ENV_FILE (copy .env.example), e.g.:"
-    log_error "  SKILLS_MP_TEST_USER='{\"loginName\":\"you@okg.com\",\"password\":\"...\",\"passwordHash\":\"...\"}'"
-    exit 1
-  fi
-  export USER="$SKILLS_MP_TEST_USER"
-  export BODY="$USER"   # skills_sync.sh signs over BODY; must equal the posted login body
-  log "credentials loaded from SKILLS_MP_TEST_USER"
+if [ "${#TARGETS[@]}" -eq 0 ]; then
+  log_warn "no target skills resolved — nothing to do"
+  exit 0
 fi
+log "resolved ${#TARGETS[@]} target(s): ${TARGETS[*]}"
+
+# ---- credentials (required for both dry-run and real upload) ----------------
+# Dry-run also logs in and queries the remote to decide create/update/skip, so
+# credentials are needed in both modes.
+if [ -z "${SKILLS_MP_TEST_USER:-}" ]; then
+  log_error "SKILLS_MP_TEST_USER is not set. Add it to $ENV_FILE (copy .env.example), e.g.:"
+  log_error "  SKILLS_MP_TEST_USER='{\"loginName\":\"you@okg.com\",\"password\":\"...\",\"passwordHash\":\"...\"}'"
+  exit 1
+fi
+export USER="$SKILLS_MP_TEST_USER"
+export BODY="$USER"   # skills_sync.sh signs over BODY; must equal the posted login body
+log "credentials loaded from SKILLS_MP_TEST_USER"
+
+# ---- batch login: log in ONCE, reuse the token for every skill --------------
+# The token is passed to per-skill calls via the exported TOKEN env var (never
+# on a command line). skills_sync.sh writes it to TOKEN_FILE (chmod 600) so it
+# never transits stdout; we read it, export it, then delete the file.
+log "logging in once; token will be reused for all ${#TARGETS[@]} skill(s)"
+TOKEN_FILE="$(mktemp)"; chmod 600 "$TOKEN_FILE"
+trap 'rm -f "$TOKEN_FILE"' EXIT
+TOKEN_FILE="$TOKEN_FILE" bash "$SYNC_SCRIPT" get_token >&2 \
+  || { log_error "batch login failed"; exit 1; }
+TOKEN="$(cat "$TOKEN_FILE")"
+rm -f "$TOKEN_FILE"; trap - EXIT
+[ -n "$TOKEN" ] || { log_error "batch login produced no token"; exit 1; }
+export TOKEN
+log "login OK; token cached for the batch (skills_sync.sh will reuse it)"
+
+# scratch file skills_sync.sh writes the resolved remote version into (per skill)
+VER_FILE="$(mktemp)"; trap 'rm -f "$VER_FILE"' EXIT
 
 declare -a SYNCED=() SKIPPED=() FAILED=()
 
+declare -i idx=0
 for name in "${TARGETS[@]}"; do
-  log_step "Processing $name"
+  idx+=1
+  log_step "Processing $name ($idx/${#TARGETS[@]})"
+
+  log "[stage 1/3] pack $name -> zip"
   zip_path="$(pack_skill "$name")"
   VERSION="$(fm_get "$SKILLS_DIR/$name/SKILL.md" '.metadata.version')"
-
-  if [ "$DRY_RUN" = "1" ]; then
-    log "DRY_RUN: would upload $name v$VERSION from $zip_path"
-    SKIPPED+=("$name v$VERSION (dry-run)"); continue
-  fi
+  log "[stage 1/3] packed $name v$VERSION -> $zip_path"
 
   export NAME="$name"
   export TITLE="$name"
@@ -162,11 +163,30 @@ for name in "${TARGETS[@]}"; do
   export CATEGORIES="$(category_for "$name")"
   export FILE_PATH="$zip_path"
 
-  log "uploading $name v$VERSION ..."
-  set +e; bash "$SYNC_SCRIPT"; rc=$?; set -e
+  # skills_sync.sh queries the remote version first, then either uploads (first
+  # time), updates (incremental) or skips (up-to-date). DRY_RUN reports the plan
+  # without uploading. Exit: 0 done/planned, 2 skipped up-to-date, else failed.
+  if [ "$DRY_RUN" = "1" ]; then log "[stage 2/3] query remote + decide (DRY_RUN: plan only) for $name v$VERSION ..."
+  else                          log "[stage 2/3] query remote + decide + upload for $name v$VERSION ..."; fi
+  printf '__UNSET__' > "$VER_FILE"   # sentinel: distinguishes "no remote query" from a real empty version
+  set +e; DRY_RUN="$DRY_RUN" VERSION_OUT="$VER_FILE" bash "$SYNC_SCRIPT"; rc=$?; set -e
+
+  remote_ver="$(cat "$VER_FILE" 2>/dev/null || true)"
+  case "$remote_ver" in
+    __UNSET__) remote_label="unknown (remote not queried / error before lookup)" ;;
+    -1)        remote_label="not on remote — first upload" ;;
+    "")         remote_label="exists on remote, no approved version yet" ;;
+    *)         remote_label="v$remote_ver" ;;
+  esac
+  log "[stage 3/3] $name: remote version = ${remote_label}; local = v$VERSION; skills_sync.sh exit=$rc"
+
   case "$rc" in
-    0) log "OK: $name v$VERSION"; SYNCED+=("$name v$VERSION")
-       [ "${KEEP_DIST:-0}" = "1" ] || { rm -f "$zip_path"; log "cleaned $zip_path"; } ;;
+    0) if [ "$DRY_RUN" = "1" ]; then log "PLANNED: $name v$VERSION (create/update)"; SKIPPED+=("$name v$VERSION (dry-run)")
+       else log "OK: $name v$VERSION"; SYNCED+=("$name v$VERSION")
+            [ "${KEEP_DIST:-0}" = "1" ] || { rm -f "$zip_path"; log "cleaned $zip_path"; }
+       fi ;;
+    2) log "SKIP: $name v$VERSION already up-to-date remotely"; SKIPPED+=("$name v$VERSION (up-to-date)")
+       { [ "${KEEP_DIST:-0}" = "1" ] || [ "$DRY_RUN" = "1" ]; } || rm -f "$zip_path" ;;
     *) log_error "$name v$VERSION failed (exit $rc); kept $zip_path for debugging"; FAILED+=("$name v$VERSION (exit $rc)") ;;
   esac
 done

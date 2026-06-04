@@ -28,5 +28,7 @@ Thumbs.db
 ehthumbs.db
 
 
-# Build output (skill zips) — never committed
+# Local-only Skills Marketplace upload tooling — never committed or mirrored
+# (kept on disk to run; .env.example template lives under scripts/)
+/scripts/
 /dist/

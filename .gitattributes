@@ -1,7 +1,0 @@
-# Internal Skills Marketplace upload tooling — must NOT be published outward
-# (GitHub mirror / Clawhub / Marketplace zips). `export-ignore` removes these
-# from `git archive` / export-based publishing.
-# NOTE: this does not affect a raw git *push* mirror — if the GitHub mirror is
-# push-based, exclude these paths in the mirror configuration as well.
-/scripts/          export-ignore
-/.gitattributes    export-ignore
